@@ -1,0 +1,16 @@
+[package]
+name = "dys"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+dys-core.workspace = true
+tonic = { workspace = true }
+tokio = { workspace = true, features = ["net"] }
+clap = { workspace = true, features = ["env"] }
+anyhow.workspace = true
+hyper-util = { version = "0.1.21", features = ["tokio"] }
+tower = { version = "0.5.3", features = ["util"] }
+qrcode = { version = "0.14.1", default-features = false }

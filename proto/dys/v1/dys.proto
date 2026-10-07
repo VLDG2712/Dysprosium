@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package dys.v1;
+
+// Served on the main mTLS listener. Every call requires an allowlisted client cert.
+service System {
+  rpc Ping(PingRequest) returns (PingReply);
+}
+
+message PingRequest {}
+
+message PingReply {
+  string hostname = 1;
+  string daemon_version = 2;
+  // SHA-256 of the client cert as seen by dysd (lowercase hex). Handy for debugging pairing.
+  string client_fingerprint = 3;
+}
+
+// Served ONLY on the short-lived pairing listener (server-auth TLS, no client cert), which exists
+// only while a pairing session started via Admin.StartPairing is active.
+//
+// The phone has no CA yet, so it must NOT do normal chain validation here. Instead it pins the
+// server's leaf certificate: SHA-256 of the leaf DER must equal the `sfp` value from the QR code.
+// Without that pin the token could be phished by anyone on the network.
+service Pairing {
+  rpc Pair(PairRequest) returns (PairReply);
+}
+
+message PairRequest {
+  // One-time secret from the QR code (`token`).
+  string token = 1;
+  // Shown in `dys clients list`. Letters, digits, space and -_.() only, max 64 chars.
+  string device_name = 2;
+  // PKCS#10 CSR (DER) generated on the phone; the private key never leaves the phone.
+  // Only its public key is used; requested subject/SANs/extensions are ignored.
+  bytes csr_der = 3;
+}
+
+message PairReply {
+  bytes client_cert_der = 1;
+  // Trust anchor for the main listener from now on.
+  bytes ca_cert_der = 2;
+}
+
+// Local-only admin API: served on the Unix socket (/run/dysd/dysd.sock), never on TCP.
+service Admin {
+  // Opens the pairing listener and streams progress until paired, expired or cancelled.
+  // Dropping the stream (Ctrl+C in `dys pair`) cancels the session.
+  rpc StartPairing(StartPairingRequest) returns (stream PairingEvent);
+  rpc ListClients(ListClientsRequest) returns (ListClientsReply);
+  rpc RevokeClient(RevokeClientRequest) returns (RevokeClientReply);
+}
+
+message StartPairingRequest {
+  // 0 = default (120 s). Capped at 600 s.
+  uint32 timeout_secs = 1;
+}
+
+message PairingEvent {
+  oneof event {
+    PairingStarted started = 1;
+    PairingCompleted completed = 2;
+    PairingEnded ended = 3;
+  }
+}
+
+message PairingStarted {
+  // dys://pair?v=1&name=<host>&host=<h1>&host=<h2>&port=<pairing>&main=<main>&token=<hex>&sfp=<hex>
+  string uri = 1;
+  uint64 expires_unix = 2;
+}
+
+message PairingCompleted {
+  string device_name = 1;
+  string fingerprint = 2;
+}
+
+message PairingEnded {
+  // "expired", "cancelled", "too many failed attempts"
+  string reason = 1;
+}
+
+message ClientInfo {
+  string fingerprint = 1;
+  string name = 2;
+  uint64 added_unix = 3;
+}
+
+message ListClientsRequest {}
+
+message ListClientsReply {
+  repeated ClientInfo clients = 1;
+}
+
+message RevokeClientRequest {
+  // Full fingerprint or a unique prefix of at least 8 hex chars.
+  string fingerprint_prefix = 1;
+}
+
+message RevokeClientReply {
+  ClientInfo revoked = 1;
+}

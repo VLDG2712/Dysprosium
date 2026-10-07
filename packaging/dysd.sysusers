@@ -1,0 +1,5 @@
+# /usr/lib/sysusers.d/dysd.conf
+# dysd runs as its own system user; members of group "dys" may use the local admin socket.
+g dys -
+u dysd - "Dysprosium daemon" /var/lib/dysd
+m dysd dys

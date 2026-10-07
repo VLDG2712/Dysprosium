@@ -1,0 +1,48 @@
+# /usr/lib/systemd/system/dysd.service
+[Unit]
+Description=Dysprosium daemon
+Wants=network-online.target
+After=network-online.target openrgb.service nzxt-ctl.service
+
+[Service]
+Type=exec
+User=dysd
+Group=dys
+ExecStart=/usr/bin/dysd serve
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+
+# /var/lib/dysd (CA, certs, allowlist) and /run/dysd (admin socket)
+StateDirectory=dysd
+StateDirectoryMode=0700
+RuntimeDirectory=dysd
+RuntimeDirectoryMode=0750
+UMask=0007
+
+# Hardening. dysd needs no privileges: cooling goes through nzxt-ctl's socket, RGB through
+# OpenRGB on 127.0.0.1, root actions through dysd-helper (D-Bus + polkit, NOT pkexec, which
+# NoNewPrivileges would block).
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+[Install]
+WantedBy=multi-user.target

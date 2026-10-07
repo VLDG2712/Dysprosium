@@ -1,0 +1,15 @@
+[package]
+name = "dys-tls"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+rcgen.workspace = true
+sha2.workspace = true
+time.workspace = true
+thiserror.workspace = true
+rustls-pki-types = { version = "1.12", features = ["std"] }
+x509-parser = "0.18"
+pem = "4"
