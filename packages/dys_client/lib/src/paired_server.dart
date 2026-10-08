@@ -34,8 +34,6 @@ class PairedServer {
   /// Same value dysd shows in `dys clients list` and returns in PingReply.client_fingerprint.
   String get fingerprint => sha256Hex(certDer);
 
-  String get caFingerprint => sha256Hex(caDer);
-
   static const _version = 1;
 
   Map<String, Object?> toJson() => {

@@ -102,9 +102,7 @@ impl System for SystemSvc {
             .get::<ClientId>()
             .map(|c| c.fingerprint.clone())
             .unwrap_or_default();
-        let hostname = std::fs::read_to_string("/proc/sys/kernel/hostname")
-            .map(|s| s.trim().to_owned())
-            .unwrap_or_default();
+        let hostname = crate::daemon::hostname();
         Ok(Response::new(PingReply {
             hostname,
             daemon_version: env!("CARGO_PKG_VERSION").to_owned(),
