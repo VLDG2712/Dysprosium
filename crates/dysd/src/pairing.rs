@@ -240,13 +240,13 @@ mod tests {
     #[test]
     fn host_order() {
         let (ca, _) = dys_tls::Ca::generate("t").unwrap();
-        let sans: Vec<String> = ["europium", "europium.local", "localhost", "127.0.0.1", "100.71.98.1", "europium.tail.ts.net"]
+        let sans: Vec<String> = ["europium", "europium.local", "localhost", "127.0.0.1", "100.64.0.10", "europium.example.ts.net"]
             .map(String::from)
             .to_vec();
         let srv = ca.issue_server("europium", &sans).unwrap();
         assert_eq!(
             advertised_hosts(&srv.cert_der).unwrap(),
-            ["100.71.98.1", "europium.local", "europium.tail.ts.net", "europium"]
+            ["100.64.0.10", "europium.local", "europium.example.ts.net", "europium"]
         );
     }
 

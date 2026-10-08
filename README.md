@@ -44,7 +44,7 @@ set D target/debug/dysd
 set Y target/debug/dys
 
 # Terminal 1 — LAN IP / Tailscale IP are examples, use yours
-$D --state-dir dev-state init --san 192.168.1.50 --san 100.71.98.1
+$D --state-dir dev-state init --san 192.168.1.50 --san 100.64.0.10
 $D --state-dir dev-state serve --listen 127.0.0.1:50051 --pair-listen 0.0.0.0:50052 --socket dev-state/dysd.sock
 
 # Terminal 2
