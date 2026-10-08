@@ -1,0 +1,14 @@
+# /usr/lib/systemd/system/dysd-gpu-limit@.service
+# Started by dysd (as user dysd, allowed by polkit rule 50-dysd.rules); never enabled.
+# Instance = watts. nvidia-smi itself rejects values outside the card's min/max.
+[Unit]
+Description=Dysprosium: set NVIDIA GPU power limit to %i W
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/nvidia-smi -i 0 --power-limit=%i
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+NoNewPrivileges=yes

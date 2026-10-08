@@ -168,10 +168,16 @@ async fn serve(state: StateDir, listen: SocketAddr, socket: PathBuf, cfg: Config
         });
     }
 
+    // The NVIDIA driver forgets the power limit on every boot.
+    {
+        let actions = d.actions.clone();
+        tokio::spawn(async move { actions.reapply_saved_gpu_limit().await });
+    }
+
     let tcp = server::bind(listen).await?;
     let uds = local::bind(&socket)?;
     tokio::try_join!(
-        server::serve(tcp, tls, d.allowlist.clone(), cancel.clone().cancelled_owned()),
+        server::serve(tcp, tls, d.allowlist.clone(), d.actions.clone(), cancel.clone().cancelled_owned()),
         local::serve(uds, socket, d.clone(), cancel.clone().cancelled_owned()),
     )?;
     Ok(())

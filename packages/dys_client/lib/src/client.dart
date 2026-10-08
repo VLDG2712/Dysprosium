@@ -39,24 +39,63 @@ class DysClient {
     return _system = pb.SystemClient(ch);
   }
 
-  Future<T> _call<T>(Future<T> Function(pb.SystemClient s, CallOptions o) f) async {
+  Future<T> _call<T>(Future<T> Function(pb.SystemClient s, CallOptions o) f, {Duration? timeout}) async {
     try {
       final s = await _connect();
-      return await f(s, CallOptions(timeout: callTimeout));
+      return await f(s, CallOptions(timeout: timeout ?? callTimeout));
     } catch (e) {
       final err = DysException.from(e, pairing: false);
-      if (err.kind != DysErrorKind.invalidInput) await _reset();
+      // Only connection-level problems warrant re-racing the hosts.
+      if (const {DysErrorKind.unreachable, DysErrorKind.timeout, DysErrorKind.notAuthorized, DysErrorKind.other}
+          .contains(err.kind)) {
+        await _reset();
+      }
       throw err;
     }
   }
 
-  Future<pb.PingReply> ping() => _call((s, o) => s.ping(pb.PingRequest(), options: o));
+  Future<pb.PingReply> ping() async {
+    final r = await _call((s, o) => s.ping(pb.PingRequest(), options: o));
+    _onLan = r.fromLan;
+    return r;
+  }
+
+  /// Whether dysd sees the current connection as coming from the LAN (from the last Ping on this
+  /// connection; null until known). dysd only allows applying updates from the LAN.
+  bool? get onLan => _onLan;
+  bool? _onLan;
+
+  /// [onLan], pinging first if it isn't known for the current connection.
+  Future<bool> isOnLan() async => _onLan ?? (await ping()).fromLan;
+
+  Future<pb.GpuInfo> getGpu() => _call((s, o) => s.getGpu(pb.GetGpuRequest(), options: o));
+
+  /// [watts] = 0 resets to the driver default and forgets the saved value.
+  Future<pb.GpuInfo> setGpuPowerLimit(int watts) => _call(
+      (s, o) => s.setGpuPowerLimit(pb.SetGpuPowerLimitRequest(watts: watts), options: o),
+      timeout: const Duration(seconds: 20));
+
+  Future<void> rebootToWindows() =>
+      _call((s, o) => s.rebootToWindows(pb.RebootToWindowsRequest(confirm: true), options: o));
+
+  /// Syncs a temporary copy of the package DBs on the PC unless cached, so allow it time.
+  Future<pb.UpdateList> checkUpdates({bool force = false}) => _call(
+      (s, o) => s.checkUpdates(pb.CheckUpdatesRequest(force: force), options: o),
+      timeout: const Duration(minutes: 4));
+
+  Future<pb.UpdateStatus> applyUpdates() =>
+      _call((s, o) => s.applyUpdates(pb.ApplyUpdatesRequest(confirm: true), options: o),
+          timeout: const Duration(seconds: 20));
+
+  Future<pb.UpdateStatus> updateStatus({int logLines = 20}) =>
+      _call((s, o) => s.getUpdateStatus(pb.GetUpdateStatusRequest(logLines: logLines), options: o));
 
   Future<void> _reset() async {
     final ch = _channel;
     _channel = null;
     _system = null;
     _host = null;
+    _onLan = null;
     await ch?.shutdown();
   }
 

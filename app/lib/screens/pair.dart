@@ -69,6 +69,7 @@ class _PairScreenState extends State<PairScreen> {
         DysErrorKind.pairingRejected => 'Pairing refused: ${e.message}\nStart a new `dys pair` and scan again.',
         DysErrorKind.notAuthorized => 'The PC did not accept the certificate: ${e.message}',
         DysErrorKind.timeout => 'Timed out. ${e.message}',
+        DysErrorKind.forbidden || DysErrorKind.failed => e.message,
         DysErrorKind.invalidInput => e.message,
         DysErrorKind.other => e.message,
       };

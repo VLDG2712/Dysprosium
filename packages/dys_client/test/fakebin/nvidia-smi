@@ -1,0 +1,12 @@
+#!/bin/bash
+# Fake nvidia-smi: RTX 4070 Ti SUPER limits (100/285/320 W). Limit stored in $FAKE_STATE/gpu_limit.
+lim=$(cat "$FAKE_STATE/gpu_limit" 2>/dev/null || echo 285)
+for a in "$@"; do
+  case $a in
+    --query-gpu=*) printf 'NVIDIA GeForce RTX 4070 Ti SUPER, 615.71.09, %s.00, 100.00, 285.00, 320.00, 31.25\n' "$lim"; exit 0 ;;
+    --power-limit=*) w=${a#--power-limit=}
+      if (( w < 100 || w > 320 )); then echo "Provided power limit $w.00 W is not a valid power limit" >&2; exit 2; fi
+      echo "$w" > "$FAKE_STATE/gpu_limit"; echo "Power limit for GPU 00000000:01:00.0 was set to $w.00 W"; exit 0 ;;
+  esac
+done
+echo "fake nvidia-smi: unsupported args $*" >&2; exit 9

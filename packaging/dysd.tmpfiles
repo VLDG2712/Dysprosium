@@ -1,0 +1,2 @@
+# /usr/lib/tmpfiles.d/dysd.conf — log dir for dysd-update.service (world-readable: pacman output)
+d /var/log/dysd 0755 root root -

@@ -1,0 +1,24 @@
+// /usr/share/polkit-1/rules.d/50-dysd.rules
+// Lets the dysd system user START exactly these units, nothing else (no stop/enable/edit,
+// no other units). Everyone else falls through to the normal policy (admin auth).
+polkit.addRule(function (action, subject) {
+    if (action.id !== "org.freedesktop.systemd1.manage-units" || subject.user !== "dysd") {
+        return polkit.Result.NOT_HANDLED;
+    }
+    if (action.lookup("verb") !== "start") {
+        return polkit.Result.NOT_HANDLED;
+    }
+    var unit = action.lookup("unit");
+    if (unit === "dysd-reboot-windows.service" || unit === "dysd-update.service") {
+        return polkit.Result.YES;
+    }
+    // dysd-gpu-limit@<watts>.service, 2-3 digits, sane range. nvidia-smi enforces the card's limits.
+    var m = /^dysd-gpu-limit@([0-9]{2,3})\.service$/.exec(unit);
+    if (m !== null) {
+        var w = parseInt(m[1], 10);
+        if (w >= 50 && w <= 600) {
+            return polkit.Result.YES;
+        }
+    }
+    return polkit.Result.NOT_HANDLED;
+});

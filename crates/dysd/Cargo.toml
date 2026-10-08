@@ -17,7 +17,7 @@ dys-core.workspace = true
 dys-tls.workspace = true
 tonic.workspace = true
 rustls.workspace = true
-tokio = { workspace = true, features = ["net"] }
+tokio = { workspace = true, features = ["net", "process", "time"] }
 clap.workspace = true
 anyhow.workspace = true
 serde.workspace = true

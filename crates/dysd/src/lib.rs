@@ -1,6 +1,8 @@
-//! dysd library: state handling, the mTLS server, pairing and the local admin socket.
+//! dysd library: state handling, the mTLS server, pairing, the local admin socket and the
+//! polkit-gated system actions.
 //! The binary in `main.rs` is a thin CLI.
 
+pub mod actions;
 pub mod daemon;
 pub mod local;
 pub mod pairing;

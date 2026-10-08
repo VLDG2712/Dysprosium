@@ -50,7 +50,7 @@ async fn start() -> Env {
     let socket = dir.path().join("dysd.sock");
     let uds = local::bind(&socket).unwrap();
     let cancel = CancellationToken::new();
-    tokio::spawn(server::serve(tcp, tls, daemon.allowlist.clone(), cancel.clone().cancelled_owned()));
+    tokio::spawn(server::serve(tcp, tls, daemon.allowlist.clone(), daemon.actions.clone(), cancel.clone().cancelled_owned()));
     tokio::spawn(local::serve(uds, socket.clone(), daemon.clone(), cancel.clone().cancelled_owned()));
     Env { _dir: dir, daemon, main, socket, cancel }
 }

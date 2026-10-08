@@ -40,12 +40,88 @@ class SystemClient extends $grpc.Client {
     return $createUnaryCall(_$ping, request, options: options);
   }
 
+  /// NVIDIA power limit. Reads need no privileges; changes go through the polkit-gated
+  /// dysd-gpu-limit@<W>.service unit. A set value is saved and reapplied when dysd starts.
+  $grpc.ResponseFuture<$0.GpuInfo> getGpu(
+    $0.GetGpuRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getGpu, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.GpuInfo> setGpuPowerLimit(
+    $0.SetGpuPowerLimitRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$setGpuPowerLimit, request, options: options);
+  }
+
+  /// Sets UEFI BootNext to Windows Boot Manager and reboots (dysd-reboot-windows.service).
+  $grpc.ResponseFuture<$0.RebootToWindowsReply> rebootToWindows(
+    $0.RebootToWindowsRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$rebootToWindows, request, options: options);
+  }
+
+  /// Pending repo (checkupdates) + AUR (yay -Qua) updates. Read-only, cached for 10 min.
+  $grpc.ResponseFuture<$0.UpdateList> checkUpdates(
+    $0.CheckUpdatesRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$checkUpdates, request, options: options);
+  }
+
+  /// Starts dysd-update.service (pacman -Syu, repo packages only). LAN or local socket only.
+  $grpc.ResponseFuture<$0.UpdateStatus> applyUpdates(
+    $0.ApplyUpdatesRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$applyUpdates, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.UpdateStatus> getUpdateStatus(
+    $0.GetUpdateStatusRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getUpdateStatus, request, options: options);
+  }
+
   // method descriptors
 
   static final _$ping = $grpc.ClientMethod<$0.PingRequest, $0.PingReply>(
       '/dys.v1.System/Ping',
       ($0.PingRequest value) => value.writeToBuffer(),
       $0.PingReply.fromBuffer);
+  static final _$getGpu = $grpc.ClientMethod<$0.GetGpuRequest, $0.GpuInfo>(
+      '/dys.v1.System/GetGpu',
+      ($0.GetGpuRequest value) => value.writeToBuffer(),
+      $0.GpuInfo.fromBuffer);
+  static final _$setGpuPowerLimit =
+      $grpc.ClientMethod<$0.SetGpuPowerLimitRequest, $0.GpuInfo>(
+          '/dys.v1.System/SetGpuPowerLimit',
+          ($0.SetGpuPowerLimitRequest value) => value.writeToBuffer(),
+          $0.GpuInfo.fromBuffer);
+  static final _$rebootToWindows =
+      $grpc.ClientMethod<$0.RebootToWindowsRequest, $0.RebootToWindowsReply>(
+          '/dys.v1.System/RebootToWindows',
+          ($0.RebootToWindowsRequest value) => value.writeToBuffer(),
+          $0.RebootToWindowsReply.fromBuffer);
+  static final _$checkUpdates =
+      $grpc.ClientMethod<$0.CheckUpdatesRequest, $0.UpdateList>(
+          '/dys.v1.System/CheckUpdates',
+          ($0.CheckUpdatesRequest value) => value.writeToBuffer(),
+          $0.UpdateList.fromBuffer);
+  static final _$applyUpdates =
+      $grpc.ClientMethod<$0.ApplyUpdatesRequest, $0.UpdateStatus>(
+          '/dys.v1.System/ApplyUpdates',
+          ($0.ApplyUpdatesRequest value) => value.writeToBuffer(),
+          $0.UpdateStatus.fromBuffer);
+  static final _$getUpdateStatus =
+      $grpc.ClientMethod<$0.GetUpdateStatusRequest, $0.UpdateStatus>(
+          '/dys.v1.System/GetUpdateStatus',
+          ($0.GetUpdateStatusRequest value) => value.writeToBuffer(),
+          $0.UpdateStatus.fromBuffer);
 }
 
 @$pb.GrpcServiceName('dys.v1.System')
@@ -60,6 +136,54 @@ abstract class SystemServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.PingRequest.fromBuffer(value),
         ($0.PingReply value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetGpuRequest, $0.GpuInfo>(
+        'GetGpu',
+        getGpu_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GetGpuRequest.fromBuffer(value),
+        ($0.GpuInfo value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SetGpuPowerLimitRequest, $0.GpuInfo>(
+        'SetGpuPowerLimit',
+        setGpuPowerLimit_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.SetGpuPowerLimitRequest.fromBuffer(value),
+        ($0.GpuInfo value) => value.writeToBuffer()));
+    $addMethod(
+        $grpc.ServiceMethod<$0.RebootToWindowsRequest, $0.RebootToWindowsReply>(
+            'RebootToWindows',
+            rebootToWindows_Pre,
+            false,
+            false,
+            ($core.List<$core.int> value) =>
+                $0.RebootToWindowsRequest.fromBuffer(value),
+            ($0.RebootToWindowsReply value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.CheckUpdatesRequest, $0.UpdateList>(
+        'CheckUpdates',
+        checkUpdates_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.CheckUpdatesRequest.fromBuffer(value),
+        ($0.UpdateList value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ApplyUpdatesRequest, $0.UpdateStatus>(
+        'ApplyUpdates',
+        applyUpdates_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.ApplyUpdatesRequest.fromBuffer(value),
+        ($0.UpdateStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetUpdateStatusRequest, $0.UpdateStatus>(
+        'GetUpdateStatus',
+        getUpdateStatus_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.GetUpdateStatusRequest.fromBuffer(value),
+        ($0.UpdateStatus value) => value.writeToBuffer()));
   }
 
   $async.Future<$0.PingReply> ping_Pre(
@@ -69,6 +193,55 @@ abstract class SystemServiceBase extends $grpc.Service {
 
   $async.Future<$0.PingReply> ping(
       $grpc.ServiceCall call, $0.PingRequest request);
+
+  $async.Future<$0.GpuInfo> getGpu_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.GetGpuRequest> $request) async {
+    return getGpu($call, await $request);
+  }
+
+  $async.Future<$0.GpuInfo> getGpu(
+      $grpc.ServiceCall call, $0.GetGpuRequest request);
+
+  $async.Future<$0.GpuInfo> setGpuPowerLimit_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.SetGpuPowerLimitRequest> $request) async {
+    return setGpuPowerLimit($call, await $request);
+  }
+
+  $async.Future<$0.GpuInfo> setGpuPowerLimit(
+      $grpc.ServiceCall call, $0.SetGpuPowerLimitRequest request);
+
+  $async.Future<$0.RebootToWindowsReply> rebootToWindows_Pre(
+      $grpc.ServiceCall $call,
+      $async.Future<$0.RebootToWindowsRequest> $request) async {
+    return rebootToWindows($call, await $request);
+  }
+
+  $async.Future<$0.RebootToWindowsReply> rebootToWindows(
+      $grpc.ServiceCall call, $0.RebootToWindowsRequest request);
+
+  $async.Future<$0.UpdateList> checkUpdates_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.CheckUpdatesRequest> $request) async {
+    return checkUpdates($call, await $request);
+  }
+
+  $async.Future<$0.UpdateList> checkUpdates(
+      $grpc.ServiceCall call, $0.CheckUpdatesRequest request);
+
+  $async.Future<$0.UpdateStatus> applyUpdates_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ApplyUpdatesRequest> $request) async {
+    return applyUpdates($call, await $request);
+  }
+
+  $async.Future<$0.UpdateStatus> applyUpdates(
+      $grpc.ServiceCall call, $0.ApplyUpdatesRequest request);
+
+  $async.Future<$0.UpdateStatus> getUpdateStatus_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.GetUpdateStatusRequest> $request) async {
+    return getUpdateStatus($call, await $request);
+  }
+
+  $async.Future<$0.UpdateStatus> getUpdateStatus(
+      $grpc.ServiceCall call, $0.GetUpdateStatusRequest request);
 }
 
 /// Served ONLY on the short-lived pairing listener (server-auth TLS, no client cert), which exists

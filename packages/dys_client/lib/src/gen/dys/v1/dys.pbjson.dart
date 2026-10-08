@@ -37,6 +37,7 @@ const PingReply$json = {
       '5': 9,
       '10': 'clientFingerprint'
     },
+    {'1': 'from_lan', '3': 4, '4': 1, '5': 8, '10': 'fromLan'},
   ],
 };
 
@@ -44,7 +45,218 @@ const PingReply$json = {
 final $typed_data.Uint8List pingReplyDescriptor = $convert.base64Decode(
     'CglQaW5nUmVwbHkSGgoIaG9zdG5hbWUYASABKAlSCGhvc3RuYW1lEiUKDmRhZW1vbl92ZXJzaW'
     '9uGAIgASgJUg1kYWVtb25WZXJzaW9uEi0KEmNsaWVudF9maW5nZXJwcmludBgDIAEoCVIRY2xp'
-    'ZW50RmluZ2VycHJpbnQ=');
+    'ZW50RmluZ2VycHJpbnQSGQoIZnJvbV9sYW4YBCABKAhSB2Zyb21MYW4=');
+
+@$core.Deprecated('Use getGpuRequestDescriptor instead')
+const GetGpuRequest$json = {
+  '1': 'GetGpuRequest',
+};
+
+/// Descriptor for `GetGpuRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGpuRequestDescriptor =
+    $convert.base64Decode('Cg1HZXRHcHVSZXF1ZXN0');
+
+@$core.Deprecated('Use gpuInfoDescriptor instead')
+const GpuInfo$json = {
+  '1': 'GpuInfo',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'driver_version', '3': 2, '4': 1, '5': 9, '10': 'driverVersion'},
+    {'1': 'limit_w', '3': 3, '4': 1, '5': 13, '10': 'limitW'},
+    {'1': 'min_w', '3': 4, '4': 1, '5': 13, '10': 'minW'},
+    {'1': 'default_w', '3': 5, '4': 1, '5': 13, '10': 'defaultW'},
+    {'1': 'max_w', '3': 6, '4': 1, '5': 13, '10': 'maxW'},
+    {'1': 'draw_w', '3': 7, '4': 1, '5': 13, '10': 'drawW'},
+    {'1': 'saved_w', '3': 8, '4': 1, '5': 13, '10': 'savedW'},
+  ],
+};
+
+/// Descriptor for `GpuInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gpuInfoDescriptor = $convert.base64Decode(
+    'CgdHcHVJbmZvEhIKBG5hbWUYASABKAlSBG5hbWUSJQoOZHJpdmVyX3ZlcnNpb24YAiABKAlSDW'
+    'RyaXZlclZlcnNpb24SFwoHbGltaXRfdxgDIAEoDVIGbGltaXRXEhMKBW1pbl93GAQgASgNUgRt'
+    'aW5XEhsKCWRlZmF1bHRfdxgFIAEoDVIIZGVmYXVsdFcSEwoFbWF4X3cYBiABKA1SBG1heFcSFQ'
+    'oGZHJhd193GAcgASgNUgVkcmF3VxIXCgdzYXZlZF93GAggASgNUgZzYXZlZFc=');
+
+@$core.Deprecated('Use setGpuPowerLimitRequestDescriptor instead')
+const SetGpuPowerLimitRequest$json = {
+  '1': 'SetGpuPowerLimitRequest',
+  '2': [
+    {'1': 'watts', '3': 1, '4': 1, '5': 13, '10': 'watts'},
+  ],
+};
+
+/// Descriptor for `SetGpuPowerLimitRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setGpuPowerLimitRequestDescriptor =
+    $convert.base64Decode(
+        'ChdTZXRHcHVQb3dlckxpbWl0UmVxdWVzdBIUCgV3YXR0cxgBIAEoDVIFd2F0dHM=');
+
+@$core.Deprecated('Use rebootToWindowsRequestDescriptor instead')
+const RebootToWindowsRequest$json = {
+  '1': 'RebootToWindowsRequest',
+  '2': [
+    {'1': 'confirm', '3': 1, '4': 1, '5': 8, '10': 'confirm'},
+  ],
+};
+
+/// Descriptor for `RebootToWindowsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List rebootToWindowsRequestDescriptor =
+    $convert.base64Decode(
+        'ChZSZWJvb3RUb1dpbmRvd3NSZXF1ZXN0EhgKB2NvbmZpcm0YASABKAhSB2NvbmZpcm0=');
+
+@$core.Deprecated('Use rebootToWindowsReplyDescriptor instead')
+const RebootToWindowsReply$json = {
+  '1': 'RebootToWindowsReply',
+};
+
+/// Descriptor for `RebootToWindowsReply`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List rebootToWindowsReplyDescriptor =
+    $convert.base64Decode('ChRSZWJvb3RUb1dpbmRvd3NSZXBseQ==');
+
+@$core.Deprecated('Use checkUpdatesRequestDescriptor instead')
+const CheckUpdatesRequest$json = {
+  '1': 'CheckUpdatesRequest',
+  '2': [
+    {'1': 'force', '3': 1, '4': 1, '5': 8, '10': 'force'},
+  ],
+};
+
+/// Descriptor for `CheckUpdatesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List checkUpdatesRequestDescriptor =
+    $convert.base64Decode(
+        'ChNDaGVja1VwZGF0ZXNSZXF1ZXN0EhQKBWZvcmNlGAEgASgIUgVmb3JjZQ==');
+
+@$core.Deprecated('Use packageUpdateDescriptor instead')
+const PackageUpdate$json = {
+  '1': 'PackageUpdate',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'old_version', '3': 2, '4': 1, '5': 9, '10': 'oldVersion'},
+    {'1': 'new_version', '3': 3, '4': 1, '5': 9, '10': 'newVersion'},
+    {
+      '1': 'source',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.dys.v1.PackageUpdate.Source',
+      '10': 'source'
+    },
+  ],
+  '4': [PackageUpdate_Source$json],
+};
+
+@$core.Deprecated('Use packageUpdateDescriptor instead')
+const PackageUpdate_Source$json = {
+  '1': 'Source',
+  '2': [
+    {'1': 'REPO', '2': 0},
+    {'1': 'AUR', '2': 1},
+  ],
+};
+
+/// Descriptor for `PackageUpdate`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List packageUpdateDescriptor = $convert.base64Decode(
+    'Cg1QYWNrYWdlVXBkYXRlEhIKBG5hbWUYASABKAlSBG5hbWUSHwoLb2xkX3ZlcnNpb24YAiABKA'
+    'lSCm9sZFZlcnNpb24SHwoLbmV3X3ZlcnNpb24YAyABKAlSCm5ld1ZlcnNpb24SNAoGc291cmNl'
+    'GAQgASgOMhwuZHlzLnYxLlBhY2thZ2VVcGRhdGUuU291cmNlUgZzb3VyY2UiGwoGU291cmNlEg'
+    'gKBFJFUE8QABIHCgNBVVIQAQ==');
+
+@$core.Deprecated('Use updateListDescriptor instead')
+const UpdateList$json = {
+  '1': 'UpdateList',
+  '2': [
+    {
+      '1': 'updates',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.PackageUpdate',
+      '10': 'updates'
+    },
+    {'1': 'checked_unix', '3': 2, '4': 1, '5': 4, '10': 'checkedUnix'},
+    {'1': 'repo_error', '3': 3, '4': 1, '5': 9, '10': 'repoError'},
+    {'1': 'aur_error', '3': 4, '4': 1, '5': 9, '10': 'aurError'},
+  ],
+};
+
+/// Descriptor for `UpdateList`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List updateListDescriptor = $convert.base64Decode(
+    'CgpVcGRhdGVMaXN0Ei8KB3VwZGF0ZXMYASADKAsyFS5keXMudjEuUGFja2FnZVVwZGF0ZVIHdX'
+    'BkYXRlcxIhCgxjaGVja2VkX3VuaXgYAiABKARSC2NoZWNrZWRVbml4Eh0KCnJlcG9fZXJyb3IY'
+    'AyABKAlSCXJlcG9FcnJvchIbCglhdXJfZXJyb3IYBCABKAlSCGF1ckVycm9y');
+
+@$core.Deprecated('Use applyUpdatesRequestDescriptor instead')
+const ApplyUpdatesRequest$json = {
+  '1': 'ApplyUpdatesRequest',
+  '2': [
+    {'1': 'confirm', '3': 1, '4': 1, '5': 8, '10': 'confirm'},
+  ],
+};
+
+/// Descriptor for `ApplyUpdatesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List applyUpdatesRequestDescriptor =
+    $convert.base64Decode(
+        'ChNBcHBseVVwZGF0ZXNSZXF1ZXN0EhgKB2NvbmZpcm0YASABKAhSB2NvbmZpcm0=');
+
+@$core.Deprecated('Use getUpdateStatusRequestDescriptor instead')
+const GetUpdateStatusRequest$json = {
+  '1': 'GetUpdateStatusRequest',
+  '2': [
+    {'1': 'log_lines', '3': 1, '4': 1, '5': 13, '10': 'logLines'},
+  ],
+};
+
+/// Descriptor for `GetUpdateStatusRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getUpdateStatusRequestDescriptor =
+    $convert.base64Decode(
+        'ChZHZXRVcGRhdGVTdGF0dXNSZXF1ZXN0EhsKCWxvZ19saW5lcxgBIAEoDVIIbG9nTGluZXM=');
+
+@$core.Deprecated('Use updateStatusDescriptor instead')
+const UpdateStatus$json = {
+  '1': 'UpdateStatus',
+  '2': [
+    {
+      '1': 'state',
+      '3': 1,
+      '4': 1,
+      '5': 14,
+      '6': '.dys.v1.UpdateStatus.State',
+      '10': 'state'
+    },
+    {'1': 'result', '3': 2, '4': 1, '5': 9, '10': 'result'},
+    {'1': 'exit_status', '3': 3, '4': 1, '5': 5, '10': 'exitStatus'},
+    {'1': 'finished_unix', '3': 4, '4': 1, '5': 4, '10': 'finishedUnix'},
+    {'1': 'log_tail', '3': 5, '4': 3, '5': 9, '10': 'logTail'},
+    {
+      '1': 'reboot_recommended',
+      '3': 6,
+      '4': 1,
+      '5': 8,
+      '10': 'rebootRecommended'
+    },
+  ],
+  '4': [UpdateStatus_State$json],
+};
+
+@$core.Deprecated('Use updateStatusDescriptor instead')
+const UpdateStatus_State$json = {
+  '1': 'State',
+  '2': [
+    {'1': 'NEVER', '2': 0},
+    {'1': 'RUNNING', '2': 1},
+    {'1': 'SUCCEEDED', '2': 2},
+    {'1': 'FAILED', '2': 3},
+  ],
+};
+
+/// Descriptor for `UpdateStatus`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List updateStatusDescriptor = $convert.base64Decode(
+    'CgxVcGRhdGVTdGF0dXMSMAoFc3RhdGUYASABKA4yGi5keXMudjEuVXBkYXRlU3RhdHVzLlN0YX'
+    'RlUgVzdGF0ZRIWCgZyZXN1bHQYAiABKAlSBnJlc3VsdBIfCgtleGl0X3N0YXR1cxgDIAEoBVIK'
+    'ZXhpdFN0YXR1cxIjCg1maW5pc2hlZF91bml4GAQgASgEUgxmaW5pc2hlZFVuaXgSGQoIbG9nX3'
+    'RhaWwYBSADKAlSB2xvZ1RhaWwSLQoScmVib290X3JlY29tbWVuZGVkGAYgASgIUhFyZWJvb3RS'
+    'ZWNvbW1lbmRlZCI6CgVTdGF0ZRIJCgVORVZFUhAAEgsKB1JVTk5JTkcQARINCglTVUNDRUVERU'
+    'QQAhIKCgZGQUlMRUQQAw==');
 
 @$core.Deprecated('Use pairRequestDescriptor instead')
 const PairRequest$json = {

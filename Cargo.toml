@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/dys-core", "crates/dys-tls", "crates/dysd", "crates/dys", "crates/dysd-helper"]
+members = ["crates/dys-core", "crates/dys-tls", "crates/dysd", "crates/dys"]
 
 [workspace.package]
 version = "0.1.0"

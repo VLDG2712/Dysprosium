@@ -9,11 +9,16 @@
 //!    grpc-dart #841, for the revocation case).
 
 use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
 use dys_core::pb::system_server::{System, SystemServer};
-use dys_core::pb::{PingReply, PingRequest};
+use dys_core::pb::{
+    ApplyUpdatesRequest, CheckUpdatesRequest, GetGpuRequest, GetUpdateStatusRequest, GpuInfo, PingReply,
+    PingRequest, RebootToWindowsReply, RebootToWindowsRequest, SetGpuPowerLimitRequest, UpdateList,
+    UpdateStatus,
+};
 use tokio::net::TcpListener;
 use tonic::service::Interceptor;
 use tonic::transport::server::TcpIncoming;
@@ -21,6 +26,7 @@ use tonic::transport::{Certificate, Identity, Server, ServerTlsConfig};
 use tonic::{Request, Response, Status};
 use tracing::{info, warn};
 
+use crate::actions::{Actions, net};
 pub use crate::daemon::SharedAllowlist;
 use crate::state::{StateDir, read};
 
@@ -65,7 +71,28 @@ impl Interceptor for Auth {
     }
 }
 
-pub struct SystemSvc;
+/// The System service. Served on the mTLS listener (phones) and on the admin socket (`dys`).
+pub struct SystemSvc {
+    pub actions: Arc<Actions>,
+}
+
+impl SystemSvc {
+    pub fn new(actions: Arc<Actions>) -> Self {
+        Self { actions }
+    }
+}
+
+/// Who is calling, for logs: device fingerprint prefix, or "local" for the admin socket.
+fn who<T>(req: &Request<T>) -> String {
+    req.extensions()
+        .get::<ClientId>()
+        .map_or_else(|| "local".to_owned(), |c| c.fingerprint[..12].to_owned())
+}
+
+/// Admin socket (no TCP peer) or a LAN address. Tailscale and anything public is "away".
+fn from_lan<T>(req: &Request<T>) -> bool {
+    req.remote_addr().is_none_or(|a| net::is_lan(a.ip()))
+}
 
 #[tonic::async_trait]
 impl System for SystemSvc {
@@ -82,7 +109,50 @@ impl System for SystemSvc {
             hostname,
             daemon_version: env!("CARGO_PKG_VERSION").to_owned(),
             client_fingerprint,
+            from_lan: from_lan(&req),
         }))
+    }
+
+    async fn get_gpu(&self, _req: Request<GetGpuRequest>) -> Result<Response<GpuInfo>, Status> {
+        Ok(Response::new(self.actions.gpu().await?))
+    }
+
+    async fn set_gpu_power_limit(
+        &self,
+        req: Request<SetGpuPowerLimitRequest>,
+    ) -> Result<Response<GpuInfo>, Status> {
+        info!(by = %who(&req), watts = req.get_ref().watts, "SetGpuPowerLimit");
+        Ok(Response::new(self.actions.set_gpu_limit(req.into_inner().watts).await?))
+    }
+
+    async fn reboot_to_windows(
+        &self,
+        req: Request<RebootToWindowsRequest>,
+    ) -> Result<Response<RebootToWindowsReply>, Status> {
+        info!(by = %who(&req), "RebootToWindows");
+        self.actions.reboot_to_windows(req.into_inner().confirm).await?;
+        Ok(Response::new(RebootToWindowsReply {}))
+    }
+
+    async fn check_updates(&self, req: Request<CheckUpdatesRequest>) -> Result<Response<UpdateList>, Status> {
+        Ok(Response::new(self.actions.check_updates(req.into_inner().force).await?))
+    }
+
+    async fn apply_updates(&self, req: Request<ApplyUpdatesRequest>) -> Result<Response<UpdateStatus>, Status> {
+        let by = who(&req);
+        if !from_lan(&req) {
+            warn!(%by, peer = ?req.remote_addr(), "ApplyUpdates refused: not on the LAN");
+            return Err(Status::permission_denied("updates can only be applied from the home network"));
+        }
+        info!(%by, "ApplyUpdates");
+        Ok(Response::new(self.actions.apply_updates(req.into_inner().confirm).await?))
+    }
+
+    async fn get_update_status(
+        &self,
+        req: Request<GetUpdateStatusRequest>,
+    ) -> Result<Response<UpdateStatus>, Status> {
+        Ok(Response::new(self.actions.update_status(req.into_inner().log_lines).await?))
     }
 }
 
@@ -103,6 +173,7 @@ pub async fn serve(
     listener: TcpListener,
     tls: ServerTlsConfig,
     allowlist: SharedAllowlist,
+    actions: Arc<Actions>,
     shutdown: impl Future<Output = ()>,
 ) -> Result<()> {
     let addr = listener.local_addr()?;
@@ -110,7 +181,7 @@ pub async fn serve(
     Server::builder()
         .tls_config(tls)
         .context("invalid TLS config")?
-        .add_service(SystemServer::with_interceptor(SystemSvc, Auth::new(allowlist)))
+        .add_service(SystemServer::with_interceptor(SystemSvc::new(actions), Auth::new(allowlist)))
         .serve_with_incoming_shutdown(TcpIncoming::from(listener), shutdown)
         .await
         .context("server error")

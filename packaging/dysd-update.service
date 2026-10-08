@@ -1,0 +1,19 @@
+# /usr/lib/systemd/system/dysd-update.service
+# Started by dysd (polkit rule 50-dysd.rules) when the phone asks to apply updates (LAN only).
+# Repo packages only; AUR stays manual. Output: /var/log/dysd/update.log,
+# result: /var/log/dysd/update.status (both read by dysd).
+[Unit]
+Description=Dysprosium: upgrade repo packages (pacman -Syu)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/pacman -Syu --noconfirm --noprogressbar --color never
+ExecStopPost=/usr/lib/dysd/record-update-result
+StandardOutput=truncate:/var/log/dysd/update.log
+StandardError=inherit
+# Never kill pacman mid-transaction because of a slow mirror.
+TimeoutStartSec=2h
+Nice=10
+IOSchedulingClass=idle

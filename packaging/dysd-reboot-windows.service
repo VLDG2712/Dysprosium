@@ -1,0 +1,9 @@
+# /usr/lib/systemd/system/dysd-reboot-windows.service
+# Started by dysd (polkit rule 50-dysd.rules). Sets UEFI BootNext to "Windows Boot Manager"
+# and reboots. The firmware consumes BootNext on the next boot, so this is one-shot.
+[Unit]
+Description=Dysprosium: boot Windows once, then reboot
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/dysd/reboot-to-windows

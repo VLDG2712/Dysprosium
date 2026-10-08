@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../store.dart';
+import '../widgets/gpu_card.dart';
+import '../widgets/reboot_card.dart';
+import '../widgets/updates_card.dart';
 import 'pair.dart';
 import 'scan.dart';
 
@@ -65,7 +68,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final sw = Stopwatch()..start();
     try {
       final r = await c.ping();
-      _pingResult = '${r.hostname} · dysd ${r.daemonVersion} · ${sw.elapsedMilliseconds} ms via ${c.host}';
+      _pingResult =
+          'dysd ${r.daemonVersion} · ${sw.elapsedMilliseconds} ms via ${c.host} (${r.fromLan ? 'LAN' : 'away'})';
     } on DysException catch (e) {
       _pingResult = null;
       _pingError = e;
@@ -160,6 +164,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ]),
           ),
         ),
+        // Keyed by fingerprint so re-pairing rebuilds them with the new client.
+        GpuCard(key: ValueKey('gpu-${s.fingerprint}'), client: _client!),
+        UpdatesCard(key: ValueKey('upd-${s.fingerprint}'), client: _client!),
+        RebootCard(key: ValueKey('rb-${s.fingerprint}'), client: _client!, serverName: s.name),
         const SizedBox(height: 8),
         Card(
           child: Column(children: [

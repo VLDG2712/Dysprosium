@@ -8,6 +8,8 @@ use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 use tracing::info;
 
+use crate::actions::runner::SystemRunner;
+use crate::actions::{Actions, Paths};
 use crate::state::{Allowlist, Client, StateDir, load_sans, read, write_atomic};
 
 pub type SharedAllowlist = Arc<RwLock<Allowlist>>;
@@ -28,6 +30,7 @@ pub struct Daemon {
     pub server_key_pem: String,
     pub server_cert_der: Vec<u8>,
     pub allowlist: SharedAllowlist,
+    pub actions: Arc<Actions>,
     /// Cancel handle of the active pairing session, if any.
     pub(crate) pairing: Mutex<Option<CancellationToken>>,
 }
@@ -39,6 +42,7 @@ impl Daemon {
         let server_key_pem = read(&state.server_key())?;
         let server_cert_der = dys_tls::cert_pem_to_der(&server_cert_pem)?;
         let allowlist = Arc::new(RwLock::new(Allowlist::load(&state.clients())?));
+        let actions = Arc::new(Actions::new(Arc::new(SystemRunner), Paths::new(state.path())));
         Ok(Self {
             state,
             cfg,
@@ -47,6 +51,7 @@ impl Daemon {
             server_key_pem,
             server_cert_der,
             allowlist,
+            actions,
             pairing: Mutex::new(None),
         })
     }

@@ -37,6 +37,7 @@ class Dysd {
   final log = StringBuffer();
 
   String get sock => '${dir.path}/dysd.sock';
+  File fake(String name) => File('${dir.path}/fake/$name');
 
   static Future<Dysd> start(String bin) async {
     final dir = await Directory.systemTemp.createTemp('dysd-e2e');
@@ -44,10 +45,21 @@ class Dysd {
     final init = await Process.run('$bin/dysd', ['--state-dir', state, 'init', '--san', host]);
     if (init.exitCode != 0) throw StateError('dysd init: ${init.stderr}');
     final main = await _freePort(host), pairPort = await _freePort(host);
-    final proc = await Process.start('$bin/dysd', [
-      '--state-dir', state, 'serve', //
-      '--listen', '$host:$main', '--pair-listen', '$host:$pairPort', '--socket', '${dir.path}/dysd.sock',
-    ]);
+    // Fake nvidia-smi/systemctl/checkupdates/yay come first in PATH: nothing real is ever touched.
+    final fake = Directory('${dir.path}/fake')..createSync();
+    final logs = Directory('${dir.path}/logs')..createSync();
+    final proc = await Process.start(
+      '$bin/dysd',
+      [
+        '--state-dir', state, 'serve', //
+        '--listen', '$host:$main', '--pair-listen', '$host:$pairPort', '--socket', '${dir.path}/dysd.sock',
+      ],
+      environment: {
+        'PATH': '${Directory('test/fakebin').absolute.path}:${Platform.environment['PATH']}',
+        'FAKE_STATE': fake.path,
+        'DYSD_LOG_DIR': logs.path,
+      },
+    );
     final d = Dysd._(bin, dir, proc, main);
     proc.stdout.transform(utf8.decoder).listen(d.log.write);
     proc.stderr.transform(utf8.decoder).listen(d.log.write);
@@ -211,5 +223,67 @@ void main() {
     } finally {
       await other.stop();
     }
+  });
+
+  group('actions (fake system tools)', () {
+    late PairedServer s;
+    late DysClient c;
+    setUp(() async {
+      s = await _pairFresh(d, 'actions');
+      c = DysClient(s);
+    });
+    tearDown(() async => c.close());
+
+    test('GPU: read, set (saved), out of range, reset', () async {
+      final g = await c.getGpu();
+      expect(g.name, contains('4070 Ti SUPER'));
+      expect([g.limitW, g.minW, g.defaultW, g.maxW, g.savedW], [285, 100, 285, 320, 0]);
+
+      final set = await c.setGpuPowerLimit(250);
+      expect([set.limitW, set.savedW], [250, 250]);
+
+      await expectLater(c.setGpuPowerLimit(400), throwsA(_kind(DysErrorKind.invalidInput)));
+
+      final reset = await c.setGpuPowerLimit(0);
+      expect([reset.limitW, reset.savedW], [285, 0]);
+    });
+
+    test('polkit denial surfaces as forbidden with a hint', () async {
+      d.fake('deny').writeAsStringSync('');
+      await expectLater(
+          c.setGpuPowerLimit(250),
+          throwsA(isA<DysException>()
+              .having((e) => e.kind, 'kind', DysErrorKind.forbidden)
+              .having((e) => e.message, 'message', contains('50-dysd.rules'))));
+    });
+
+    test('reboot to Windows starts the unit', () async {
+      await c.rebootToWindows();
+      expect(d.fake('reboots').readAsLinesSync(), hasLength(1));
+    });
+
+    test('check updates: repo + AUR', () async {
+      final l = await c.checkUpdates(force: true);
+      expect(l.updates.map((u) => '${u.source.name}:${u.name}'),
+          ['REPO:linux', 'REPO:mesa', 'AUR:brave-bin']);
+      expect(l.repoError, isEmpty);
+      expect(l.aurError, isEmpty);
+    });
+
+    test('apply updates from LAN, poll to completion, refuse a second concurrent run', () async {
+      final first = await c.applyUpdates();
+      expect(first.state, UpdateStatus_State.RUNNING);
+      await expectLater(c.applyUpdates(), throwsA(_kind(DysErrorKind.failed)));
+
+      var st = first;
+      for (var i = 0; i < 30 && st.state == UpdateStatus_State.RUNNING; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        st = await c.updateStatus();
+      }
+      expect(st.state, UpdateStatus_State.SUCCEEDED);
+      expect(st.logTail.last, '(2/2) upgrading mesa');
+      expect(st.rebootRecommended, isTrue);
+      expect(await c.isOnLan(), isTrue);
+    });
   });
 }

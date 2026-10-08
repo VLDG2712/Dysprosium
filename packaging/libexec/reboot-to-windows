@@ -1,0 +1,22 @@
+#!/bin/bash
+# /usr/lib/dysd/reboot-to-windows — run by dysd-reboot-windows.service (as root).
+# Finds the "Windows Boot Manager" UEFI entry by label, sets BootNext to it, verifies, reboots.
+set -euo pipefail
+
+# Label is followed by a TAB and the device path (or nothing), so "Windows Boot Manager Backup"
+# and similar don't match. Capture output first: grep -q + pipefail would SIGPIPE efibootmgr.
+list=$(efibootmgr)
+entry=$(sed -nE 's/^Boot([0-9A-Fa-f]{4})[* ] Windows Boot Manager(\t.*)?$/\1/p' <<<"$list" | head -n1)
+if [[ -z $entry ]]; then
+    echo "no 'Windows Boot Manager' entry in efibootmgr output" >&2
+    exit 1
+fi
+
+efibootmgr --bootnext "$entry" >/dev/null
+after=$(efibootmgr)
+if ! grep -qx "BootNext: $entry" <<<"$after"; then
+    echo "BootNext did not stick (wanted $entry)" >&2
+    exit 1
+fi
+echo "BootNext=$entry (Windows Boot Manager), rebooting"
+exec systemctl --no-block reboot

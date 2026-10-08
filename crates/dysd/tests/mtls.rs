@@ -36,8 +36,12 @@ async fn start() -> Fixture {
     let tls = server::tls_config(&state).unwrap();
     let (tx, rx) = tokio::sync::oneshot::channel::<()>();
     let al = allowlist.clone();
+    let actions = Arc::new(dysd::actions::Actions::new(
+        Arc::new(dysd::actions::runner::SystemRunner),
+        dysd::actions::Paths::new(dir.path()),
+    ));
     tokio::spawn(async move {
-        server::serve(listener, tls, al, async { let _ = rx.await; }).await.unwrap();
+        server::serve(listener, tls, al, actions, async { let _ = rx.await; }).await.unwrap();
     });
     Fixture { _dir: dir, addr, ca, allowlist, _stop: tx }
 }
@@ -73,6 +77,7 @@ async fn allowlisted_client_succeeds() {
     let mut client = connect(&f, f.ca.cert_pem(), Some(&c)).await.unwrap();
     let reply = client.ping(PingRequest {}).await.unwrap().into_inner();
     assert_eq!(reply.client_fingerprint, fp);
+    assert!(reply.from_lan, "loopback counts as LAN");
 }
 
 #[tokio::test]

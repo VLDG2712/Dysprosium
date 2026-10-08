@@ -172,8 +172,8 @@ pub async fn serve(
     info!(path = %path.display(), "local admin socket listening");
     let auth = LocalAuth::new();
     let res = Server::builder()
-        .add_service(AdminServer::with_interceptor(AdminSvc(daemon), auth.clone()))
-        .add_service(SystemServer::with_interceptor(SystemSvc, auth))
+        .add_service(AdminServer::with_interceptor(AdminSvc(daemon.clone()), auth.clone()))
+        .add_service(SystemServer::with_interceptor(SystemSvc::new(daemon.actions.clone()), auth))
         .serve_with_incoming_shutdown(UnixListenerStream::new(listener), shutdown)
         .await;
     let _ = std::fs::remove_file(&path);

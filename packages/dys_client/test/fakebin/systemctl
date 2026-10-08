@@ -1,0 +1,30 @@
+#!/bin/bash
+# Fake systemctl for dysd's calls: [--no-ask-password] start [--no-block] UNIT | show -p ActiveState --value UNIT
+args=("$@"); [[ ${args[0]} == --no-ask-password ]] && args=("${args[@]:1}")
+echo "systemctl ${args[*]}" >> "$FAKE_STATE/calls"
+case ${args[0]} in
+  show) cat "$FAKE_STATE/update_state" 2>/dev/null || echo inactive; exit 0 ;;
+  start)
+    unit=${args[-1]}
+    if [[ -e $FAKE_STATE/deny ]]; then echo "Failed to start $unit: Access denied" >&2; exit 4; fi
+    case $unit in
+      dysd-gpu-limit@*.service) w=${unit#dysd-gpu-limit@}; w=${w%.service}
+        nvidia-smi -i 0 --power-limit="$w" >/dev/null || { echo "Job for $unit failed." >&2; exit 1; } ;;
+      dysd-reboot-windows.service) date +%s >> "$FAKE_STATE/reboots" ;;
+      dysd-update.service)
+        echo activating > "$FAKE_STATE/update_state"
+        (
+          : > "$DYSD_LOG_DIR/update.log"
+          for l in ':: Synchronizing package databases...' ':: Starting full system upgrade...' \
+                   '(1/2) upgrading linux' '(2/2) upgrading mesa'; do
+            echo "$l" >> "$DYSD_LOG_DIR/update.log"; sleep 0.4
+          done
+          echo "success 0 $(date +%s)" > "$DYSD_LOG_DIR/update.status"
+          echo inactive > "$FAKE_STATE/update_state"
+        ) >/dev/null 2>&1 &
+        ;;
+      *) echo "Failed to start $unit: Access denied" >&2; exit 4 ;;
+    esac
+    exit 0 ;;
+esac
+echo "fake systemctl: unsupported $*" >&2; exit 9

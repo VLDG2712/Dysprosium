@@ -20,14 +20,18 @@ RuntimeDirectoryMode=0750
 UMask=0007
 
 # Hardening. dysd needs no privileges: cooling goes through nzxt-ctl's socket, RGB through
-# OpenRGB on 127.0.0.1, root actions through dysd-helper (D-Bus + polkit, NOT pkexec, which
-# NoNewPrivileges would block).
+# OpenRGB on 127.0.0.1, root actions by starting fixed units that polkit allows only for this
+# user (50-dysd.rules: dysd-gpu-limit@.service, dysd-reboot-windows.service, dysd-update.service).
+# Child processes (nvidia-smi, checkupdates/fakeroot/pacman, yay, systemctl) inherit all of this.
 NoNewPrivileges=yes
 CapabilityBoundingSet=
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
-PrivateDevices=yes
+# nvidia-smi (power readings) needs the NVIDIA control + GPU nodes; nothing else from /dev.
+DevicePolicy=closed
+DeviceAllow=/dev/nvidiactl rw
+DeviceAllow=/dev/nvidia0 rw
 ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectKernelLogs=yes
@@ -43,6 +47,9 @@ MemoryDenyWriteExecute=yes
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
 SystemCallFilter=~@privileged @resources
+# Blocked syscalls fail with EPERM instead of killing the process (children like pacman under
+# fakeroot probe setuid & co. and cope with EPERM, as for any unprivileged user).
+SystemCallErrorNumber=EPERM
 
 [Install]
 WantedBy=multi-user.target

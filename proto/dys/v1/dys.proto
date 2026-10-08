@@ -5,6 +5,20 @@ package dys.v1;
 // Served on the main mTLS listener. Every call requires an allowlisted client cert.
 service System {
   rpc Ping(PingRequest) returns (PingReply);
+
+  // NVIDIA power limit. Reads need no privileges; changes go through the polkit-gated
+  // dysd-gpu-limit@<W>.service unit. A set value is saved and reapplied when dysd starts.
+  rpc GetGpu(GetGpuRequest) returns (GpuInfo);
+  rpc SetGpuPowerLimit(SetGpuPowerLimitRequest) returns (GpuInfo);
+
+  // Sets UEFI BootNext to Windows Boot Manager and reboots (dysd-reboot-windows.service).
+  rpc RebootToWindows(RebootToWindowsRequest) returns (RebootToWindowsReply);
+
+  // Pending repo (checkupdates) + AUR (yay -Qua) updates. Read-only, cached for 10 min.
+  rpc CheckUpdates(CheckUpdatesRequest) returns (UpdateList);
+  // Starts dysd-update.service (pacman -Syu, repo packages only). LAN or local socket only.
+  rpc ApplyUpdates(ApplyUpdatesRequest) returns (UpdateStatus);
+  rpc GetUpdateStatus(GetUpdateStatusRequest) returns (UpdateStatus);
 }
 
 message PingRequest {}
@@ -14,6 +28,86 @@ message PingReply {
   string daemon_version = 2;
   // SHA-256 of the client cert as seen by dysd (lowercase hex). Handy for debugging pairing.
   string client_fingerprint = 3;
+  // dysd sees this connection as coming from the LAN (not Tailscale/public). Authoritative for
+  // LAN-only actions like ApplyUpdates; the phone can't reliably tell from the host name.
+  bool from_lan = 4;
+}
+
+message GetGpuRequest {}
+
+message GpuInfo {
+  string name = 1;
+  string driver_version = 2;
+  // All in whole watts.
+  uint32 limit_w = 3;
+  uint32 min_w = 4;
+  uint32 default_w = 5;
+  uint32 max_w = 6;
+  uint32 draw_w = 7;
+  // Value dysd reapplies at startup; 0 = none saved (driver default after boot).
+  uint32 saved_w = 8;
+}
+
+message SetGpuPowerLimitRequest {
+  // Must be within [min_w, max_w]. 0 = back to the driver default and forget the saved value.
+  uint32 watts = 1;
+}
+
+message RebootToWindowsRequest {
+  // Must be true; guards against accidental calls.
+  bool confirm = 1;
+}
+
+message RebootToWindowsReply {}
+
+message CheckUpdatesRequest {
+  // Ignore the cache and check now.
+  bool force = 1;
+}
+
+message PackageUpdate {
+  enum Source {
+    REPO = 0;
+    AUR = 1;
+  }
+  string name = 1;
+  string old_version = 2;
+  string new_version = 3;
+  Source source = 4;
+}
+
+message UpdateList {
+  repeated PackageUpdate updates = 1;
+  uint64 checked_unix = 2;
+  // Non-empty if that half of the check failed (the other half may still be valid).
+  string repo_error = 3;
+  string aur_error = 4;
+}
+
+message ApplyUpdatesRequest {
+  bool confirm = 1;
+}
+
+message GetUpdateStatusRequest {
+  // How many lines of the pacman log to return (0 = default 20, max 200).
+  uint32 log_lines = 1;
+}
+
+message UpdateStatus {
+  enum State {
+    NEVER = 0;
+    RUNNING = 1;
+    SUCCEEDED = 2;
+    FAILED = 3;
+  }
+  State state = 1;
+  // systemd's result ("success", "exit-code", "timeout", ...) of the last run.
+  string result = 2;
+  int32 exit_status = 3;
+  uint64 finished_unix = 4;
+  repeated string log_tail = 5;
+  // The last run upgraded the kernel, NVIDIA driver or systemd.
+  bool reboot_recommended = 6;
 }
 
 // Served ONLY on the short-lived pairing listener (server-auth TLS, no client cert), which exists

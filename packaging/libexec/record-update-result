@@ -1,0 +1,4 @@
+#!/bin/sh
+# /usr/lib/dysd/record-update-result — ExecStopPost of dysd-update.service.
+# Writes "<SERVICE_RESULT> <EXIT_STATUS> <unix time>" for dysd (unit state is garbage-collected).
+printf '%s %s %s\n' "${SERVICE_RESULT:-unknown}" "${EXIT_STATUS:--}" "$(date +%s)" > /var/log/dysd/update.status

@@ -14,6 +14,12 @@ enum DysErrorKind {
   /// Main listener refused this phone: revoked or unknown certificate → re-pair.
   notAuthorized,
 
+  /// The PC refused this action (e.g. updates over Tailscale, polkit rule missing).
+  forbidden,
+
+  /// The PC can't do it right now (already running, nvidia-smi failing, …).
+  failed,
+
   /// Call timed out. On the main listener this is also what a TLS 1.3 client-cert rejection looks
   /// like in grpc-dart (grpc-dart#841), e.g. after the CA was regenerated.
   timeout,
@@ -52,6 +58,10 @@ class DysException implements Exception {
       switch (e.code) {
         case StatusCode.permissionDenied when pairing:
           return DysException(DysErrorKind.pairingRejected, msg, e);
+        case StatusCode.permissionDenied:
+          return DysException(DysErrorKind.forbidden, msg, e);
+        case StatusCode.failedPrecondition || StatusCode.alreadyExists:
+          return DysException(DysErrorKind.failed, msg, e);
         case StatusCode.invalidArgument:
           return DysException(DysErrorKind.invalidInput, msg, e);
         case StatusCode.unauthenticated:
