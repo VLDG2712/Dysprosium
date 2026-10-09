@@ -364,7 +364,9 @@ class _RgbCardState extends State<RgbCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_effects.isEmpty) const Text('dysd offers no software effects.'),
+        if (_effects.isEmpty)
+          const Text('dysd on the PC lists no software effects. It is probably an older build: '
+              'rebuild and reinstall dysd, then refresh.'),
         Wrap(
           spacing: 8,
           runSpacing: 4,
