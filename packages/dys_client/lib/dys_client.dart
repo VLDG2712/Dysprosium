@@ -4,7 +4,17 @@ library;
 export 'src/client.dart' show DysClient, verifyPaired;
 export 'src/errors.dart' show DysErrorKind, DysException;
 export 'src/gen/dys/v1/dys.pb.dart'
-    show GpuInfo, PackageUpdate, PackageUpdate_Source, PingReply, UpdateList, UpdateStatus, UpdateStatus_State;
+    show
+        GpuInfo,
+        PackageUpdate,
+        PackageUpdate_Source,
+        PingReply,
+        RgbDevice,
+        RgbDeviceList,
+        RgbMode,
+        UpdateList,
+        UpdateStatus,
+        UpdateStatus_State;
 export 'src/keys.dart' show DeviceKey;
 export 'src/pair_uri.dart' show PairUri, PairUriException;
 export 'src/paired_server.dart' show PairedServer;

@@ -4,8 +4,10 @@
 
 pub mod actions;
 pub mod daemon;
+pub mod fx;
 pub mod local;
 pub mod pairing;
+pub mod rgb;
 pub mod server;
 pub mod state;
 

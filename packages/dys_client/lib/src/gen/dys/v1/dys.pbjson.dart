@@ -258,6 +258,198 @@ final $typed_data.Uint8List updateStatusDescriptor = $convert.base64Decode(
     'ZWNvbW1lbmRlZCI6CgVTdGF0ZRIJCgVORVZFUhAAEgsKB1JVTk5JTkcQARINCglTVUNDRUVERU'
     'QQAhIKCgZGQUlMRUQQAw==');
 
+@$core.Deprecated('Use listRgbDevicesRequestDescriptor instead')
+const ListRgbDevicesRequest$json = {
+  '1': 'ListRgbDevicesRequest',
+};
+
+/// Descriptor for `ListRgbDevicesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listRgbDevicesRequestDescriptor =
+    $convert.base64Decode('ChVMaXN0UmdiRGV2aWNlc1JlcXVlc3Q=');
+
+@$core.Deprecated('Use rgbDeviceListDescriptor instead')
+const RgbDeviceList$json = {
+  '1': 'RgbDeviceList',
+  '2': [
+    {
+      '1': 'devices',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.RgbDevice',
+      '10': 'devices'
+    },
+    {'1': 'software_effects', '3': 2, '4': 3, '5': 9, '10': 'softwareEffects'},
+  ],
+};
+
+/// Descriptor for `RgbDeviceList`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List rgbDeviceListDescriptor = $convert.base64Decode(
+    'Cg1SZ2JEZXZpY2VMaXN0EisKB2RldmljZXMYASADKAsyES5keXMudjEuUmdiRGV2aWNlUgdkZX'
+    'ZpY2VzEikKEHNvZnR3YXJlX2VmZmVjdHMYAiADKAlSD3NvZnR3YXJlRWZmZWN0cw==');
+
+@$core.Deprecated('Use rgbDeviceDescriptor instead')
+const RgbDevice$json = {
+  '1': 'RgbDevice',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 13, '10': 'id'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'vendor', '3': 3, '4': 1, '5': 9, '10': 'vendor'},
+    {'1': 'location', '3': 4, '4': 1, '5': 9, '10': 'location'},
+    {'1': 'kind', '3': 5, '4': 1, '5': 5, '10': 'kind'},
+    {'1': 'led_count', '3': 6, '4': 1, '5': 13, '10': 'ledCount'},
+    {'1': 'active_mode', '3': 7, '4': 1, '5': 5, '10': 'activeMode'},
+    {
+      '1': 'modes',
+      '3': 8,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.RgbMode',
+      '10': 'modes'
+    },
+    {'1': 'led_colors', '3': 9, '4': 3, '5': 13, '10': 'ledColors'},
+    {'1': 'software_effect', '3': 10, '4': 1, '5': 9, '10': 'softwareEffect'},
+  ],
+};
+
+/// Descriptor for `RgbDevice`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List rgbDeviceDescriptor = $convert.base64Decode(
+    'CglSZ2JEZXZpY2USDgoCaWQYASABKA1SAmlkEhIKBG5hbWUYAiABKAlSBG5hbWUSFgoGdmVuZG'
+    '9yGAMgASgJUgZ2ZW5kb3ISGgoIbG9jYXRpb24YBCABKAlSCGxvY2F0aW9uEhIKBGtpbmQYBSAB'
+    'KAVSBGtpbmQSGwoJbGVkX2NvdW50GAYgASgNUghsZWRDb3VudBIfCgthY3RpdmVfbW9kZRgHIA'
+    'EoBVIKYWN0aXZlTW9kZRIlCgVtb2RlcxgIIAMoCzIPLmR5cy52MS5SZ2JNb2RlUgVtb2RlcxId'
+    'CgpsZWRfY29sb3JzGAkgAygNUglsZWRDb2xvcnMSJwoPc29mdHdhcmVfZWZmZWN0GAogASgJUg'
+    '5zb2Z0d2FyZUVmZmVjdA==');
+
+@$core.Deprecated('Use rgbModeDescriptor instead')
+const RgbMode$json = {
+  '1': 'RgbMode',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'flags', '3': 2, '4': 1, '5': 13, '10': 'flags'},
+    {'1': 'speed_min', '3': 3, '4': 1, '5': 13, '10': 'speedMin'},
+    {'1': 'speed_max', '3': 4, '4': 1, '5': 13, '10': 'speedMax'},
+    {'1': 'speed', '3': 5, '4': 1, '5': 13, '10': 'speed'},
+    {'1': 'brightness_min', '3': 6, '4': 1, '5': 13, '10': 'brightnessMin'},
+    {'1': 'brightness_max', '3': 7, '4': 1, '5': 13, '10': 'brightnessMax'},
+    {'1': 'brightness', '3': 8, '4': 1, '5': 13, '10': 'brightness'},
+    {'1': 'colors_min', '3': 9, '4': 1, '5': 13, '10': 'colorsMin'},
+    {'1': 'colors_max', '3': 10, '4': 1, '5': 13, '10': 'colorsMax'},
+    {'1': 'direction', '3': 11, '4': 1, '5': 13, '10': 'direction'},
+    {'1': 'colors', '3': 12, '4': 3, '5': 13, '10': 'colors'},
+  ],
+};
+
+/// Descriptor for `RgbMode`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List rgbModeDescriptor = $convert.base64Decode(
+    'CgdSZ2JNb2RlEhIKBG5hbWUYASABKAlSBG5hbWUSFAoFZmxhZ3MYAiABKA1SBWZsYWdzEhsKCX'
+    'NwZWVkX21pbhgDIAEoDVIIc3BlZWRNaW4SGwoJc3BlZWRfbWF4GAQgASgNUghzcGVlZE1heBIU'
+    'CgVzcGVlZBgFIAEoDVIFc3BlZWQSJQoOYnJpZ2h0bmVzc19taW4YBiABKA1SDWJyaWdodG5lc3'
+    'NNaW4SJQoOYnJpZ2h0bmVzc19tYXgYByABKA1SDWJyaWdodG5lc3NNYXgSHgoKYnJpZ2h0bmVz'
+    'cxgIIAEoDVIKYnJpZ2h0bmVzcxIdCgpjb2xvcnNfbWluGAkgASgNUgljb2xvcnNNaW4SHQoKY2'
+    '9sb3JzX21heBgKIAEoDVIJY29sb3JzTWF4EhwKCWRpcmVjdGlvbhgLIAEoDVIJZGlyZWN0aW9u'
+    'EhYKBmNvbG9ycxgMIAMoDVIGY29sb3Jz');
+
+@$core.Deprecated('Use setRgbColorRequestDescriptor instead')
+const SetRgbColorRequest$json = {
+  '1': 'SetRgbColorRequest',
+  '2': [
+    {'1': 'device_id', '3': 1, '4': 1, '5': 13, '10': 'deviceId'},
+    {'1': 'rgb', '3': 2, '4': 1, '5': 13, '10': 'rgb'},
+    {'1': 'off', '3': 3, '4': 1, '5': 8, '10': 'off'},
+  ],
+};
+
+/// Descriptor for `SetRgbColorRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setRgbColorRequestDescriptor = $convert.base64Decode(
+    'ChJTZXRSZ2JDb2xvclJlcXVlc3QSGwoJZGV2aWNlX2lkGAEgASgNUghkZXZpY2VJZBIQCgNyZ2'
+    'IYAiABKA1SA3JnYhIQCgNvZmYYAyABKAhSA29mZg==');
+
+@$core.Deprecated('Use setRgbEffectRequestDescriptor instead')
+const SetRgbEffectRequest$json = {
+  '1': 'SetRgbEffectRequest',
+  '2': [
+    {'1': 'device_id', '3': 1, '4': 1, '5': 13, '10': 'deviceId'},
+    {'1': 'effect', '3': 2, '4': 1, '5': 9, '10': 'effect'},
+    {'1': 'speed', '3': 3, '4': 1, '5': 13, '10': 'speed'},
+    {'1': 'brightness', '3': 4, '4': 1, '5': 13, '10': 'brightness'},
+    {'1': 'rgb', '3': 5, '4': 1, '5': 13, '9': 0, '10': 'rgb', '17': true},
+  ],
+  '8': [
+    {'1': '_rgb'},
+  ],
+};
+
+/// Descriptor for `SetRgbEffectRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setRgbEffectRequestDescriptor = $convert.base64Decode(
+    'ChNTZXRSZ2JFZmZlY3RSZXF1ZXN0EhsKCWRldmljZV9pZBgBIAEoDVIIZGV2aWNlSWQSFgoGZW'
+    'ZmZWN0GAIgASgJUgZlZmZlY3QSFAoFc3BlZWQYAyABKA1SBXNwZWVkEh4KCmJyaWdodG5lc3MY'
+    'BCABKA1SCmJyaWdodG5lc3MSFQoDcmdiGAUgASgNSABSA3JnYogBAUIGCgRfcmdi');
+
+@$core.Deprecated('Use rgbColorsDescriptor instead')
+const RgbColors$json = {
+  '1': 'RgbColors',
+  '2': [
+    {'1': 'rgb', '3': 1, '4': 3, '5': 13, '10': 'rgb'},
+  ],
+};
+
+/// Descriptor for `RgbColors`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List rgbColorsDescriptor =
+    $convert.base64Decode('CglSZ2JDb2xvcnMSEAoDcmdiGAEgAygNUgNyZ2I=');
+
+@$core.Deprecated('Use setRgbModeRequestDescriptor instead')
+const SetRgbModeRequest$json = {
+  '1': 'SetRgbModeRequest',
+  '2': [
+    {'1': 'device_id', '3': 1, '4': 1, '5': 13, '10': 'deviceId'},
+    {'1': 'mode_index', '3': 2, '4': 1, '5': 13, '10': 'modeIndex'},
+    {'1': 'speed', '3': 3, '4': 1, '5': 13, '9': 0, '10': 'speed', '17': true},
+    {
+      '1': 'brightness',
+      '3': 4,
+      '4': 1,
+      '5': 13,
+      '9': 1,
+      '10': 'brightness',
+      '17': true
+    },
+    {
+      '1': 'direction',
+      '3': 5,
+      '4': 1,
+      '5': 13,
+      '9': 2,
+      '10': 'direction',
+      '17': true
+    },
+    {
+      '1': 'colors',
+      '3': 6,
+      '4': 1,
+      '5': 11,
+      '6': '.dys.v1.RgbColors',
+      '9': 3,
+      '10': 'colors',
+      '17': true
+    },
+  ],
+  '8': [
+    {'1': '_speed'},
+    {'1': '_brightness'},
+    {'1': '_direction'},
+    {'1': '_colors'},
+  ],
+};
+
+/// Descriptor for `SetRgbModeRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setRgbModeRequestDescriptor = $convert.base64Decode(
+    'ChFTZXRSZ2JNb2RlUmVxdWVzdBIbCglkZXZpY2VfaWQYASABKA1SCGRldmljZUlkEh0KCm1vZG'
+    'VfaW5kZXgYAiABKA1SCW1vZGVJbmRleBIZCgVzcGVlZBgDIAEoDUgAUgVzcGVlZIgBARIjCgpi'
+    'cmlnaHRuZXNzGAQgASgNSAFSCmJyaWdodG5lc3OIAQESIQoJZGlyZWN0aW9uGAUgASgNSAJSCW'
+    'RpcmVjdGlvbogBARIuCgZjb2xvcnMYBiABKAsyES5keXMudjEuUmdiQ29sb3JzSANSBmNvbG9y'
+    'c4gBAUIICgZfc3BlZWRCDQoLX2JyaWdodG5lc3NCDAoKX2RpcmVjdGlvbkIJCgdfY29sb3Jz');
+
 @$core.Deprecated('Use pairRequestDescriptor instead')
 const PairRequest$json = {
   '1': 'PairRequest',

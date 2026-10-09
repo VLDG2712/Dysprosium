@@ -15,9 +15,9 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use dys_core::pb::system_server::{System, SystemServer};
 use dys_core::pb::{
-    ApplyUpdatesRequest, CheckUpdatesRequest, GetGpuRequest, GetUpdateStatusRequest, GpuInfo, PingReply,
-    PingRequest, RebootToWindowsReply, RebootToWindowsRequest, SetGpuPowerLimitRequest, UpdateList,
-    UpdateStatus,
+    ApplyUpdatesRequest, CheckUpdatesRequest, GetGpuRequest, GetUpdateStatusRequest, GpuInfo,
+    ListRgbDevicesRequest, PingReply, PingRequest, RebootToWindowsReply, RebootToWindowsRequest, RgbDevice,
+    RgbDeviceList, SetGpuPowerLimitRequest, SetRgbColorRequest, SetRgbEffectRequest, SetRgbModeRequest, UpdateList, UpdateStatus,
 };
 use tokio::net::TcpListener;
 use tonic::service::Interceptor;
@@ -151,6 +151,28 @@ impl System for SystemSvc {
         req: Request<GetUpdateStatusRequest>,
     ) -> Result<Response<UpdateStatus>, Status> {
         Ok(Response::new(self.actions.update_status(req.into_inner().log_lines).await?))
+    }
+
+    async fn list_rgb_devices(&self, _req: Request<ListRgbDevicesRequest>) -> Result<Response<RgbDeviceList>, Status> {
+        let (devices, software_effects) = self.actions.rgb().list().await?;
+        Ok(Response::new(RgbDeviceList { devices, software_effects }))
+    }
+
+    async fn set_rgb_color(&self, req: Request<SetRgbColorRequest>) -> Result<Response<RgbDevice>, Status> {
+        let r = req.get_ref();
+        info!(by = %who(&req), device = r.device_id, off = r.off, rgb = format_args!("{:06x}", r.rgb), "SetRgbColor");
+        Ok(Response::new(self.actions.rgb().set_color(req.into_inner()).await?))
+    }
+
+    async fn set_rgb_effect(&self, req: Request<SetRgbEffectRequest>) -> Result<Response<RgbDevice>, Status> {
+        let r = req.get_ref();
+        info!(by = %who(&req), device = r.device_id, effect = %r.effect, "SetRgbEffect");
+        Ok(Response::new(self.actions.rgb().set_effect(req.into_inner()).await?))
+    }
+
+    async fn set_rgb_mode(&self, req: Request<SetRgbModeRequest>) -> Result<Response<RgbDevice>, Status> {
+        info!(by = %who(&req), device = req.get_ref().device_id, mode = req.get_ref().mode_index, "SetRgbMode");
+        Ok(Response::new(self.actions.rgb().set_mode(req.into_inner()).await?))
     }
 }
 

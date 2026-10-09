@@ -1,0 +1,20 @@
+[package]
+name = "dys-openrgb"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Minimal async client for the OpenRGB SDK server (protocol 6, OpenRGB 1.0+)"
+
+[dependencies]
+tokio = { workspace = true, features = ["net", "io-util", "time", "sync"] }
+thiserror.workspace = true
+tracing.workspace = true
+
+[features]
+# In-process mock OpenRGB server for tests (this crate's and dysd's).
+mock = []
+
+[dev-dependencies]
+dys-openrgb = { path = ".", features = ["mock"] }
+tokio = { workspace = true, features = ["net", "io-util", "time", "sync", "macros", "rt"] }

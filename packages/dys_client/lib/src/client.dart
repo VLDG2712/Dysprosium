@@ -90,6 +90,57 @@ class DysClient {
   Future<pb.UpdateStatus> updateStatus({int logLines = 20}) =>
       _call((s, o) => s.getUpdateStatus(pb.GetUpdateStatusRequest(logLines: logLines), options: o));
 
+  /// All OpenRGB devices plus the software effect names dysd offers. Polls OpenRGB on the PC.
+  Future<pb.RgbDeviceList> listRgbDevices() =>
+      _call((s, o) => s.listRgbDevices(pb.ListRgbDevicesRequest(), options: o), timeout: const Duration(seconds: 10));
+
+  /// One solid colour (0xRRGGBB) on the whole device, or [off]. Stops a running software effect.
+  Future<pb.RgbDevice> setRgbColor(int deviceId, int rgb, {bool off = false}) => _call(
+    (s, o) => s.setRgbColor(
+      pb.SetRgbColorRequest(deviceId: deviceId, rgb: rgb & 0xFFFFFF, off: off),
+      options: o,
+    ),
+  );
+
+  /// Switch to the device's own mode [modeIndex]. Null values keep the mode's current setting;
+  /// setting something the mode doesn't support is `invalidInput`. Stops a running software effect.
+  Future<pb.RgbDevice> setRgbMode(
+    int deviceId,
+    int modeIndex, {
+    int? speed,
+    int? brightness,
+    int? direction,
+    List<int>? colors,
+  }) => _call(
+    (s, o) => s.setRgbMode(
+      pb.SetRgbModeRequest(
+        deviceId: deviceId,
+        modeIndex: modeIndex,
+        speed: speed,
+        brightness: brightness,
+        direction: direction,
+        colors: colors == null ? null : pb.RgbColors(rgb: colors.map((c) => c & 0xFFFFFF)),
+      ),
+      options: o,
+    ),
+  );
+
+  /// Software effect run by dysd (one of [pb.RgbDeviceList.softwareEffects], or "none" to stop and
+  /// keep the last frame). [speed] 1..10, [brightness] 1..100 %; 0 = dysd's default.
+  Future<pb.RgbDevice> setRgbEffect(int deviceId, String effect, {int speed = 0, int brightness = 0, int? rgb}) =>
+      _call(
+        (s, o) => s.setRgbEffect(
+          pb.SetRgbEffectRequest(
+            deviceId: deviceId,
+            effect: effect,
+            speed: speed,
+            brightness: brightness,
+            rgb: rgb == null ? null : rgb & 0xFFFFFF,
+          ),
+          options: o,
+        ),
+      );
+
   Future<void> _reset() async {
     final ch = _channel;
     _channel = null;

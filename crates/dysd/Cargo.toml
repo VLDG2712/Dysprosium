@@ -15,6 +15,7 @@ path = "src/main.rs"
 [dependencies]
 dys-core.workspace = true
 dys-tls.workspace = true
+dys-openrgb.workspace = true
 tonic.workspace = true
 rustls.workspace = true
 tokio = { workspace = true, features = ["net", "process", "time"] }
@@ -29,6 +30,7 @@ tokio-stream = { version = "0.1.19", features = ["net"] }
 ring = "0.17"
 
 [dev-dependencies]
+dys-openrgb = { workspace = true, features = ["mock"] }
 tempfile = "3"
 rcgen.workspace = true
 hyper-util = { version = "0.1.21", features = ["tokio"] }

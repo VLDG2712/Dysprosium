@@ -87,6 +87,41 @@ class SystemClient extends $grpc.Client {
     return $createUnaryCall(_$getUpdateStatus, request, options: options);
   }
 
+  /// RGB lighting, through the local OpenRGB SDK server (127.0.0.1:6742, protocol 6).
+  /// Device ids are OpenRGB's own unique ids: list first, don't hard-code them.
+  $grpc.ResponseFuture<$0.RgbDeviceList> listRgbDevices(
+    $0.ListRgbDevicesRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$listRgbDevices, request, options: options);
+  }
+
+  /// One solid colour on the whole device, or off.
+  $grpc.ResponseFuture<$0.RgbDevice> setRgbColor(
+    $0.SetRgbColorRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$setRgbColor, request, options: options);
+  }
+
+  /// Switch to a mode (effect) and change its speed/brightness/direction/colours.
+  $grpc.ResponseFuture<$0.RgbDevice> setRgbMode(
+    $0.SetRgbModeRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$setRgbMode, request, options: options);
+  }
+
+  /// Software effect computed by dysd and pushed to the LEDs ~20x/s (for devices whose own effect
+  /// modes don't work). Any SetRgbColor/SetRgbMode on the device stops it; effect "none" stops it
+  /// and leaves the last frame. Effects do not survive a dysd restart.
+  $grpc.ResponseFuture<$0.RgbDevice> setRgbEffect(
+    $0.SetRgbEffectRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$setRgbEffect, request, options: options);
+  }
+
   // method descriptors
 
   static final _$ping = $grpc.ClientMethod<$0.PingRequest, $0.PingReply>(
@@ -122,6 +157,26 @@ class SystemClient extends $grpc.Client {
           '/dys.v1.System/GetUpdateStatus',
           ($0.GetUpdateStatusRequest value) => value.writeToBuffer(),
           $0.UpdateStatus.fromBuffer);
+  static final _$listRgbDevices =
+      $grpc.ClientMethod<$0.ListRgbDevicesRequest, $0.RgbDeviceList>(
+          '/dys.v1.System/ListRgbDevices',
+          ($0.ListRgbDevicesRequest value) => value.writeToBuffer(),
+          $0.RgbDeviceList.fromBuffer);
+  static final _$setRgbColor =
+      $grpc.ClientMethod<$0.SetRgbColorRequest, $0.RgbDevice>(
+          '/dys.v1.System/SetRgbColor',
+          ($0.SetRgbColorRequest value) => value.writeToBuffer(),
+          $0.RgbDevice.fromBuffer);
+  static final _$setRgbMode =
+      $grpc.ClientMethod<$0.SetRgbModeRequest, $0.RgbDevice>(
+          '/dys.v1.System/SetRgbMode',
+          ($0.SetRgbModeRequest value) => value.writeToBuffer(),
+          $0.RgbDevice.fromBuffer);
+  static final _$setRgbEffect =
+      $grpc.ClientMethod<$0.SetRgbEffectRequest, $0.RgbDevice>(
+          '/dys.v1.System/SetRgbEffect',
+          ($0.SetRgbEffectRequest value) => value.writeToBuffer(),
+          $0.RgbDevice.fromBuffer);
 }
 
 @$pb.GrpcServiceName('dys.v1.System')
@@ -184,6 +239,37 @@ abstract class SystemServiceBase extends $grpc.Service {
         ($core.List<$core.int> value) =>
             $0.GetUpdateStatusRequest.fromBuffer(value),
         ($0.UpdateStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ListRgbDevicesRequest, $0.RgbDeviceList>(
+        'ListRgbDevices',
+        listRgbDevices_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.ListRgbDevicesRequest.fromBuffer(value),
+        ($0.RgbDeviceList value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SetRgbColorRequest, $0.RgbDevice>(
+        'SetRgbColor',
+        setRgbColor_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.SetRgbColorRequest.fromBuffer(value),
+        ($0.RgbDevice value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SetRgbModeRequest, $0.RgbDevice>(
+        'SetRgbMode',
+        setRgbMode_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.SetRgbModeRequest.fromBuffer(value),
+        ($0.RgbDevice value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SetRgbEffectRequest, $0.RgbDevice>(
+        'SetRgbEffect',
+        setRgbEffect_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.SetRgbEffectRequest.fromBuffer(value),
+        ($0.RgbDevice value) => value.writeToBuffer()));
   }
 
   $async.Future<$0.PingReply> ping_Pre(
@@ -242,6 +328,38 @@ abstract class SystemServiceBase extends $grpc.Service {
 
   $async.Future<$0.UpdateStatus> getUpdateStatus(
       $grpc.ServiceCall call, $0.GetUpdateStatusRequest request);
+
+  $async.Future<$0.RgbDeviceList> listRgbDevices_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ListRgbDevicesRequest> $request) async {
+    return listRgbDevices($call, await $request);
+  }
+
+  $async.Future<$0.RgbDeviceList> listRgbDevices(
+      $grpc.ServiceCall call, $0.ListRgbDevicesRequest request);
+
+  $async.Future<$0.RgbDevice> setRgbColor_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.SetRgbColorRequest> $request) async {
+    return setRgbColor($call, await $request);
+  }
+
+  $async.Future<$0.RgbDevice> setRgbColor(
+      $grpc.ServiceCall call, $0.SetRgbColorRequest request);
+
+  $async.Future<$0.RgbDevice> setRgbMode_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.SetRgbModeRequest> $request) async {
+    return setRgbMode($call, await $request);
+  }
+
+  $async.Future<$0.RgbDevice> setRgbMode(
+      $grpc.ServiceCall call, $0.SetRgbModeRequest request);
+
+  $async.Future<$0.RgbDevice> setRgbEffect_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.SetRgbEffectRequest> $request) async {
+    return setRgbEffect($call, await $request);
+  }
+
+  $async.Future<$0.RgbDevice> setRgbEffect(
+      $grpc.ServiceCall call, $0.SetRgbEffectRequest request);
 }
 
 /// Served ONLY on the short-lived pairing listener (server-auth TLS, no client cert), which exists

@@ -20,6 +20,7 @@ use tokio::sync::Mutex;
 use tonic::Status;
 use tracing::{info, warn};
 
+use crate::rgb::RgbHub;
 use crate::state::write_atomic;
 use runner::{Runner, args};
 
@@ -64,6 +65,8 @@ pub struct Actions {
     gpu_lock: Mutex<()>,
     /// Serialises update checks; holds the cached result.
     check_cache: Mutex<Option<(Instant, UpdateList)>>,
+    /// OpenRGB connection (RGB lighting).
+    rgb: RgbHub,
 }
 
 fn now_unix() -> u64 {
@@ -76,7 +79,24 @@ fn internal(e: impl std::fmt::Display) -> Status {
 
 impl Actions {
     pub fn new(runner: Arc<dyn Runner>, paths: Paths) -> Self {
-        Self { runner, paths, gpu_lock: Mutex::new(()), check_cache: Mutex::new(None) }
+        Self {
+            runner,
+            paths,
+            gpu_lock: Mutex::new(()),
+            check_cache: Mutex::new(None),
+            rgb: RgbHub::new(crate::rgb::DEFAULT_ADDR),
+        }
+    }
+
+    /// Use another OpenRGB SDK address than 127.0.0.1:6742.
+    #[must_use]
+    pub fn with_openrgb_addr(mut self, addr: impl Into<String>) -> Self {
+        self.rgb = RgbHub::new(addr);
+        self
+    }
+
+    pub fn rgb(&self) -> &RgbHub {
+        &self.rgb
     }
 
     async fn systemctl(&self, a: &[&str], timeout: Duration) -> Result<runner::Output, Status> {

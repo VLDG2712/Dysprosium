@@ -373,6 +373,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dys-openrgb"
+version = "0.1.0"
+dependencies = [
+ "dys-openrgb",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "dys-tls"
 version = "0.1.0"
 dependencies = [
@@ -392,6 +402,7 @@ dependencies = [
  "anyhow",
  "clap",
  "dys-core",
+ "dys-openrgb",
  "dys-tls",
  "hyper-util",
  "rcgen",

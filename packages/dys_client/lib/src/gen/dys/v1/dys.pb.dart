@@ -977,6 +977,814 @@ class UpdateStatus extends $pb.GeneratedMessage {
   void clearRebootRecommended() => $_clearField(6);
 }
 
+class ListRgbDevicesRequest extends $pb.GeneratedMessage {
+  factory ListRgbDevicesRequest() => ListRgbDevicesRequest._();
+
+  ListRgbDevicesRequest._();
+
+  factory ListRgbDevicesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListRgbDevicesRequest()..mergeFromBuffer(data, registry);
+  factory ListRgbDevicesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListRgbDevicesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListRgbDevicesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: ListRgbDevicesRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListRgbDevicesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListRgbDevicesRequest copyWith(
+          void Function(ListRgbDevicesRequest) updates) =>
+      super.copyWith((message) => updates(message as ListRgbDevicesRequest))
+          as ListRgbDevicesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListRgbDevicesRequest() / ListRgbDevicesRequest.new instead')
+  static ListRgbDevicesRequest create() => ListRgbDevicesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListRgbDevicesRequest._();
+  @$core.override
+  ListRgbDevicesRequest createEmptyInstance() => ListRgbDevicesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListRgbDevicesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListRgbDevicesRequest>(
+          ListRgbDevicesRequest.$_createMessage);
+  static ListRgbDevicesRequest? _defaultInstance;
+}
+
+class RgbDeviceList extends $pb.GeneratedMessage {
+  factory RgbDeviceList({
+    $core.Iterable<RgbDevice>? devices,
+    $core.Iterable<$core.String>? softwareEffects,
+  }) {
+    final result = RgbDeviceList._();
+    if (devices != null) result.devices.addAll(devices);
+    if (softwareEffects != null) result.softwareEffects.addAll(softwareEffects);
+    return result;
+  }
+
+  RgbDeviceList._();
+
+  factory RgbDeviceList.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RgbDeviceList()..mergeFromBuffer(data, registry);
+  factory RgbDeviceList.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RgbDeviceList()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RgbDeviceList',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: RgbDeviceList.$_createMessage)
+    ..pPM<RgbDevice>(1, _omitFieldNames ? '' : 'devices',
+        subBuilder: RgbDevice.$_createMessage)
+    ..pPS(2, _omitFieldNames ? '' : 'softwareEffects')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RgbDeviceList clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RgbDeviceList copyWith(void Function(RgbDeviceList) updates) =>
+      super.copyWith((message) => updates(message as RgbDeviceList))
+          as RgbDeviceList;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RgbDeviceList() / RgbDeviceList.new instead')
+  static RgbDeviceList create() => RgbDeviceList._();
+  static $pb.GeneratedMessage $_createMessage() => RgbDeviceList._();
+  @$core.override
+  RgbDeviceList createEmptyInstance() => RgbDeviceList._();
+  @$core.pragma('dart2js:noInline')
+  static RgbDeviceList getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RgbDeviceList>(
+          RgbDeviceList.$_createMessage);
+  static RgbDeviceList? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<RgbDevice> get devices => $_getList(0);
+
+  /// Names accepted by SetRgbEffect.
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get softwareEffects => $_getList(1);
+}
+
+class RgbDevice extends $pb.GeneratedMessage {
+  factory RgbDevice({
+    $core.int? id,
+    $core.String? name,
+    $core.String? vendor,
+    $core.String? location,
+    $core.int? kind,
+    $core.int? ledCount,
+    $core.int? activeMode,
+    $core.Iterable<RgbMode>? modes,
+    $core.Iterable<$core.int>? ledColors,
+    $core.String? softwareEffect,
+  }) {
+    final result = RgbDevice._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (vendor != null) result.vendor = vendor;
+    if (location != null) result.location = location;
+    if (kind != null) result.kind = kind;
+    if (ledCount != null) result.ledCount = ledCount;
+    if (activeMode != null) result.activeMode = activeMode;
+    if (modes != null) result.modes.addAll(modes);
+    if (ledColors != null) result.ledColors.addAll(ledColors);
+    if (softwareEffect != null) result.softwareEffect = softwareEffect;
+    return result;
+  }
+
+  RgbDevice._();
+
+  factory RgbDevice.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RgbDevice()..mergeFromBuffer(data, registry);
+  factory RgbDevice.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RgbDevice()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RgbDevice',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: RgbDevice.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'id', fieldType: $pb.PbFieldType.OU3)
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'vendor')
+    ..aOS(4, _omitFieldNames ? '' : 'location')
+    ..aI(5, _omitFieldNames ? '' : 'kind')
+    ..aI(6, _omitFieldNames ? '' : 'ledCount', fieldType: $pb.PbFieldType.OU3)
+    ..aI(7, _omitFieldNames ? '' : 'activeMode')
+    ..pPM<RgbMode>(8, _omitFieldNames ? '' : 'modes',
+        subBuilder: RgbMode.$_createMessage)
+    ..p<$core.int>(9, _omitFieldNames ? '' : 'ledColors', $pb.PbFieldType.KU3)
+    ..aOS(10, _omitFieldNames ? '' : 'softwareEffect')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RgbDevice clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RgbDevice copyWith(void Function(RgbDevice) updates) =>
+      super.copyWith((message) => updates(message as RgbDevice)) as RgbDevice;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RgbDevice() / RgbDevice.new instead')
+  static RgbDevice create() => RgbDevice._();
+  static $pb.GeneratedMessage $_createMessage() => RgbDevice._();
+  @$core.override
+  RgbDevice createEmptyInstance() => RgbDevice._();
+  @$core.pragma('dart2js:noInline')
+  static RgbDevice getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RgbDevice>(RgbDevice.$_createMessage);
+  static RgbDevice? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get id => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set id($core.int value) => $_setUnsignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get vendor => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set vendor($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasVendor() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearVendor() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get location => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set location($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasLocation() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearLocation() => $_clearField(4);
+
+  /// OpenRGB DEVICE_TYPE_* (0 motherboard, 1 DRAM, 2 GPU, 3 cooler, 4 LED strip, 5 keyboard, ...).
+  @$pb.TagNumber(5)
+  $core.int get kind => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set kind($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasKind() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearKind() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.int get ledCount => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set ledCount($core.int value) => $_setUnsignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasLedCount() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearLedCount() => $_clearField(6);
+
+  /// Index into `modes`.
+  @$pb.TagNumber(7)
+  $core.int get activeMode => $_getIZ(6);
+  @$pb.TagNumber(7)
+  set activeMode($core.int value) => $_setSignedInt32(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasActiveMode() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearActiveMode() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $pb.PbList<RgbMode> get modes => $_getList(7);
+
+  /// Last known colour of every LED, 0xRRGGBB.
+  @$pb.TagNumber(9)
+  $pb.PbList<$core.int> get ledColors => $_getList(8);
+
+  /// Software effect currently running on this device ("" = none).
+  @$pb.TagNumber(10)
+  $core.String get softwareEffect => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set softwareEffect($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasSoftwareEffect() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearSoftwareEffect() => $_clearField(10);
+}
+
+class RgbMode extends $pb.GeneratedMessage {
+  factory RgbMode({
+    $core.String? name,
+    $core.int? flags,
+    $core.int? speedMin,
+    $core.int? speedMax,
+    $core.int? speed,
+    $core.int? brightnessMin,
+    $core.int? brightnessMax,
+    $core.int? brightness,
+    $core.int? colorsMin,
+    $core.int? colorsMax,
+    $core.int? direction,
+    $core.Iterable<$core.int>? colors,
+  }) {
+    final result = RgbMode._();
+    if (name != null) result.name = name;
+    if (flags != null) result.flags = flags;
+    if (speedMin != null) result.speedMin = speedMin;
+    if (speedMax != null) result.speedMax = speedMax;
+    if (speed != null) result.speed = speed;
+    if (brightnessMin != null) result.brightnessMin = brightnessMin;
+    if (brightnessMax != null) result.brightnessMax = brightnessMax;
+    if (brightness != null) result.brightness = brightness;
+    if (colorsMin != null) result.colorsMin = colorsMin;
+    if (colorsMax != null) result.colorsMax = colorsMax;
+    if (direction != null) result.direction = direction;
+    if (colors != null) result.colors.addAll(colors);
+    return result;
+  }
+
+  RgbMode._();
+
+  factory RgbMode.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RgbMode()..mergeFromBuffer(data, registry);
+  factory RgbMode.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RgbMode()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RgbMode',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: RgbMode.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aI(2, _omitFieldNames ? '' : 'flags', fieldType: $pb.PbFieldType.OU3)
+    ..aI(3, _omitFieldNames ? '' : 'speedMin', fieldType: $pb.PbFieldType.OU3)
+    ..aI(4, _omitFieldNames ? '' : 'speedMax', fieldType: $pb.PbFieldType.OU3)
+    ..aI(5, _omitFieldNames ? '' : 'speed', fieldType: $pb.PbFieldType.OU3)
+    ..aI(6, _omitFieldNames ? '' : 'brightnessMin',
+        fieldType: $pb.PbFieldType.OU3)
+    ..aI(7, _omitFieldNames ? '' : 'brightnessMax',
+        fieldType: $pb.PbFieldType.OU3)
+    ..aI(8, _omitFieldNames ? '' : 'brightness', fieldType: $pb.PbFieldType.OU3)
+    ..aI(9, _omitFieldNames ? '' : 'colorsMin', fieldType: $pb.PbFieldType.OU3)
+    ..aI(10, _omitFieldNames ? '' : 'colorsMax', fieldType: $pb.PbFieldType.OU3)
+    ..aI(11, _omitFieldNames ? '' : 'direction', fieldType: $pb.PbFieldType.OU3)
+    ..p<$core.int>(12, _omitFieldNames ? '' : 'colors', $pb.PbFieldType.KU3)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RgbMode clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RgbMode copyWith(void Function(RgbMode) updates) =>
+      super.copyWith((message) => updates(message as RgbMode)) as RgbMode;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RgbMode() / RgbMode.new instead')
+  static RgbMode create() => RgbMode._();
+  static $pb.GeneratedMessage $_createMessage() => RgbMode._();
+  @$core.override
+  RgbMode createEmptyInstance() => RgbMode._();
+  @$core.pragma('dart2js:noInline')
+  static RgbMode getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RgbMode>(RgbMode.$_createMessage);
+  static RgbMode? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  /// OpenRGB MODE_FLAG_* bits: 0 speed, 1 left/right, 2 up/down, 3 horizontal/vertical direction,
+  /// 4 brightness, 5 per-LED colours, 6 mode colours, 7 random colour.
+  @$pb.TagNumber(2)
+  $core.int get flags => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set flags($core.int value) => $_setUnsignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFlags() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFlags() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get speedMin => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set speedMin($core.int value) => $_setUnsignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSpeedMin() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSpeedMin() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get speedMax => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set speedMax($core.int value) => $_setUnsignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSpeedMax() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSpeedMax() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get speed => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set speed($core.int value) => $_setUnsignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasSpeed() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSpeed() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.int get brightnessMin => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set brightnessMin($core.int value) => $_setUnsignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasBrightnessMin() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearBrightnessMin() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.int get brightnessMax => $_getIZ(6);
+  @$pb.TagNumber(7)
+  set brightnessMax($core.int value) => $_setUnsignedInt32(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasBrightnessMax() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearBrightnessMax() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.int get brightness => $_getIZ(7);
+  @$pb.TagNumber(8)
+  set brightness($core.int value) => $_setUnsignedInt32(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasBrightness() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearBrightness() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.int get colorsMin => $_getIZ(8);
+  @$pb.TagNumber(9)
+  set colorsMin($core.int value) => $_setUnsignedInt32(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasColorsMin() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearColorsMin() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.int get colorsMax => $_getIZ(9);
+  @$pb.TagNumber(10)
+  set colorsMax($core.int value) => $_setUnsignedInt32(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasColorsMax() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearColorsMax() => $_clearField(10);
+
+  /// 0 left, 1 right, 2 up, 3 down, 4 horizontal, 5 vertical.
+  @$pb.TagNumber(11)
+  $core.int get direction => $_getIZ(10);
+  @$pb.TagNumber(11)
+  set direction($core.int value) => $_setUnsignedInt32(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasDirection() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearDirection() => $_clearField(11);
+
+  /// The mode's own colours (0xRRGGBB); only meaningful if flag 6 is set.
+  @$pb.TagNumber(12)
+  $pb.PbList<$core.int> get colors => $_getList(11);
+}
+
+class SetRgbColorRequest extends $pb.GeneratedMessage {
+  factory SetRgbColorRequest({
+    $core.int? deviceId,
+    $core.int? rgb,
+    $core.bool? off,
+  }) {
+    final result = SetRgbColorRequest._();
+    if (deviceId != null) result.deviceId = deviceId;
+    if (rgb != null) result.rgb = rgb;
+    if (off != null) result.off = off;
+    return result;
+  }
+
+  SetRgbColorRequest._();
+
+  factory SetRgbColorRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetRgbColorRequest()..mergeFromBuffer(data, registry);
+  factory SetRgbColorRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetRgbColorRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetRgbColorRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: SetRgbColorRequest.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'deviceId', fieldType: $pb.PbFieldType.OU3)
+    ..aI(2, _omitFieldNames ? '' : 'rgb', fieldType: $pb.PbFieldType.OU3)
+    ..aOB(3, _omitFieldNames ? '' : 'off')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetRgbColorRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetRgbColorRequest copyWith(void Function(SetRgbColorRequest) updates) =>
+      super.copyWith((message) => updates(message as SetRgbColorRequest))
+          as SetRgbColorRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SetRgbColorRequest() / SetRgbColorRequest.new instead')
+  static SetRgbColorRequest create() => SetRgbColorRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetRgbColorRequest._();
+  @$core.override
+  SetRgbColorRequest createEmptyInstance() => SetRgbColorRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetRgbColorRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetRgbColorRequest>(
+          SetRgbColorRequest.$_createMessage);
+  static SetRgbColorRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get deviceId => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set deviceId($core.int value) => $_setUnsignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDeviceId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDeviceId() => $_clearField(1);
+
+  /// 0xRRGGBB. Ignored when `off` is set.
+  @$pb.TagNumber(2)
+  $core.int get rgb => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set rgb($core.int value) => $_setUnsignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRgb() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRgb() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get off => $_getBF(2);
+  @$pb.TagNumber(3)
+  set off($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasOff() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearOff() => $_clearField(3);
+}
+
+class SetRgbEffectRequest extends $pb.GeneratedMessage {
+  factory SetRgbEffectRequest({
+    $core.int? deviceId,
+    $core.String? effect,
+    $core.int? speed,
+    $core.int? brightness,
+    $core.int? rgb,
+  }) {
+    final result = SetRgbEffectRequest._();
+    if (deviceId != null) result.deviceId = deviceId;
+    if (effect != null) result.effect = effect;
+    if (speed != null) result.speed = speed;
+    if (brightness != null) result.brightness = brightness;
+    if (rgb != null) result.rgb = rgb;
+    return result;
+  }
+
+  SetRgbEffectRequest._();
+
+  factory SetRgbEffectRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetRgbEffectRequest()..mergeFromBuffer(data, registry);
+  factory SetRgbEffectRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetRgbEffectRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetRgbEffectRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: SetRgbEffectRequest.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'deviceId', fieldType: $pb.PbFieldType.OU3)
+    ..aOS(2, _omitFieldNames ? '' : 'effect')
+    ..aI(3, _omitFieldNames ? '' : 'speed', fieldType: $pb.PbFieldType.OU3)
+    ..aI(4, _omitFieldNames ? '' : 'brightness', fieldType: $pb.PbFieldType.OU3)
+    ..aI(5, _omitFieldNames ? '' : 'rgb', fieldType: $pb.PbFieldType.OU3)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetRgbEffectRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetRgbEffectRequest copyWith(void Function(SetRgbEffectRequest) updates) =>
+      super.copyWith((message) => updates(message as SetRgbEffectRequest))
+          as SetRgbEffectRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use SetRgbEffectRequest() / SetRgbEffectRequest.new instead')
+  static SetRgbEffectRequest create() => SetRgbEffectRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetRgbEffectRequest._();
+  @$core.override
+  SetRgbEffectRequest createEmptyInstance() => SetRgbEffectRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetRgbEffectRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetRgbEffectRequest>(
+          SetRgbEffectRequest.$_createMessage);
+  static SetRgbEffectRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get deviceId => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set deviceId($core.int value) => $_setUnsignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDeviceId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDeviceId() => $_clearField(1);
+
+  /// One of RgbDeviceList.software_effects, or "none".
+  @$pb.TagNumber(2)
+  $core.String get effect => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set effect($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasEffect() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearEffect() => $_clearField(2);
+
+  /// 1 (slow) .. 10 (fast); 0 = default (5).
+  @$pb.TagNumber(3)
+  $core.int get speed => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set speed($core.int value) => $_setUnsignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSpeed() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSpeed() => $_clearField(3);
+
+  /// 1..100 %; 0 = 100.
+  @$pb.TagNumber(4)
+  $core.int get brightness => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set brightness($core.int value) => $_setUnsignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasBrightness() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearBrightness() => $_clearField(4);
+
+  /// 0xRRGGBB for breathing/wave (default white); rainbow ignores it.
+  @$pb.TagNumber(5)
+  $core.int get rgb => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set rgb($core.int value) => $_setUnsignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasRgb() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearRgb() => $_clearField(5);
+}
+
+class RgbColors extends $pb.GeneratedMessage {
+  factory RgbColors({
+    $core.Iterable<$core.int>? rgb,
+  }) {
+    final result = RgbColors._();
+    if (rgb != null) result.rgb.addAll(rgb);
+    return result;
+  }
+
+  RgbColors._();
+
+  factory RgbColors.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RgbColors()..mergeFromBuffer(data, registry);
+  factory RgbColors.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RgbColors()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RgbColors',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: RgbColors.$_createMessage)
+    ..p<$core.int>(1, _omitFieldNames ? '' : 'rgb', $pb.PbFieldType.KU3)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RgbColors clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RgbColors copyWith(void Function(RgbColors) updates) =>
+      super.copyWith((message) => updates(message as RgbColors)) as RgbColors;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RgbColors() / RgbColors.new instead')
+  static RgbColors create() => RgbColors._();
+  static $pb.GeneratedMessage $_createMessage() => RgbColors._();
+  @$core.override
+  RgbColors createEmptyInstance() => RgbColors._();
+  @$core.pragma('dart2js:noInline')
+  static RgbColors getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RgbColors>(RgbColors.$_createMessage);
+  static RgbColors? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.int> get rgb => $_getList(0);
+}
+
+class SetRgbModeRequest extends $pb.GeneratedMessage {
+  factory SetRgbModeRequest({
+    $core.int? deviceId,
+    $core.int? modeIndex,
+    $core.int? speed,
+    $core.int? brightness,
+    $core.int? direction,
+    RgbColors? colors,
+  }) {
+    final result = SetRgbModeRequest._();
+    if (deviceId != null) result.deviceId = deviceId;
+    if (modeIndex != null) result.modeIndex = modeIndex;
+    if (speed != null) result.speed = speed;
+    if (brightness != null) result.brightness = brightness;
+    if (direction != null) result.direction = direction;
+    if (colors != null) result.colors = colors;
+    return result;
+  }
+
+  SetRgbModeRequest._();
+
+  factory SetRgbModeRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetRgbModeRequest()..mergeFromBuffer(data, registry);
+  factory SetRgbModeRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetRgbModeRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetRgbModeRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: SetRgbModeRequest.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'deviceId', fieldType: $pb.PbFieldType.OU3)
+    ..aI(2, _omitFieldNames ? '' : 'modeIndex', fieldType: $pb.PbFieldType.OU3)
+    ..aI(3, _omitFieldNames ? '' : 'speed', fieldType: $pb.PbFieldType.OU3)
+    ..aI(4, _omitFieldNames ? '' : 'brightness', fieldType: $pb.PbFieldType.OU3)
+    ..aI(5, _omitFieldNames ? '' : 'direction', fieldType: $pb.PbFieldType.OU3)
+    ..aOM<RgbColors>(6, _omitFieldNames ? '' : 'colors',
+        subBuilder: RgbColors.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetRgbModeRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetRgbModeRequest copyWith(void Function(SetRgbModeRequest) updates) =>
+      super.copyWith((message) => updates(message as SetRgbModeRequest))
+          as SetRgbModeRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SetRgbModeRequest() / SetRgbModeRequest.new instead')
+  static SetRgbModeRequest create() => SetRgbModeRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetRgbModeRequest._();
+  @$core.override
+  SetRgbModeRequest createEmptyInstance() => SetRgbModeRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetRgbModeRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<SetRgbModeRequest>(
+          SetRgbModeRequest.$_createMessage);
+  static SetRgbModeRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get deviceId => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set deviceId($core.int value) => $_setUnsignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDeviceId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDeviceId() => $_clearField(1);
+
+  /// Index into RgbDevice.modes.
+  @$pb.TagNumber(2)
+  $core.int get modeIndex => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set modeIndex($core.int value) => $_setUnsignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasModeIndex() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearModeIndex() => $_clearField(2);
+
+  /// Unset = keep the mode's current value. Setting something the mode doesn't have is an error.
+  @$pb.TagNumber(3)
+  $core.int get speed => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set speed($core.int value) => $_setUnsignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSpeed() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSpeed() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get brightness => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set brightness($core.int value) => $_setUnsignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasBrightness() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearBrightness() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get direction => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set direction($core.int value) => $_setUnsignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasDirection() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearDirection() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  RgbColors get colors => $_getN(5);
+  @$pb.TagNumber(6)
+  set colors(RgbColors value) => $_setField(6, value);
+  @$pb.TagNumber(6)
+  $core.bool hasColors() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearColors() => $_clearField(6);
+  @$pb.TagNumber(6)
+  RgbColors ensureColors() => $_ensure(5);
+}
+
 class PairRequest extends $pb.GeneratedMessage {
   factory PairRequest({
     $core.String? token,

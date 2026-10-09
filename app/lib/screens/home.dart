@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../store.dart';
 import '../widgets/gpu_card.dart';
 import '../widgets/reboot_card.dart';
+import '../widgets/rgb_card.dart';
 import '../widgets/updates_card.dart';
 import 'pair.dart';
 import 'scan.dart';
@@ -166,6 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         // Keyed by fingerprint so re-pairing rebuilds them with the new client.
         GpuCard(key: ValueKey('gpu-${s.fingerprint}'), client: _client!),
+        RgbCard(key: ValueKey('rgb-${s.fingerprint}'), client: _client!),
         UpdatesCard(key: ValueKey('upd-${s.fingerprint}'), client: _client!),
         RebootCard(key: ValueKey('rb-${s.fingerprint}'), client: _client!, serverName: s.name),
         const SizedBox(height: 8),

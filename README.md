@@ -8,8 +8,9 @@
 |---|---|
 | `dys-core` | generated gRPC code from `proto/dys/v1/dys.proto` |
 | `dys-tls` | private CA, server/client certs, CSR signing, fingerprints, SAN parsing |
+| `dys-openrgb` | async client for the OpenRGB SDK server (protocol 6 / OpenRGB 1.0+); no tonic, usable on its own |
 | `dysd` | mTLS server + allowlist, pairing listener, local admin socket, `init`/`serve`/`dev-client`/`clients` |
-| `dys` | `ping`, `pair` (terminal QR), `clients`, `gpu`, `updates`, `reboot-windows` over the admin socket |
+| `dys` | `ping`, `pair` (terminal QR), `clients`, `gpu`, `updates`, `rgb`, `reboot-windows` over the admin socket |
 
 Build needs `protoc`. TLS backend: rustls + ring (no aws-lc).
 
@@ -54,6 +55,44 @@ dys updates apply           # asks, then follows the pacman output
 dys updates status -n 50
 dys reboot-windows          # asks first
 ```
+
+## RGB (OpenRGB)
+
+dysd talks to the OpenRGB service on `127.0.0.1:6742` (override: `DYSD_OPENRGB_ADDR`) with its own
+SDK client, `dys-openrgb`. It connects on first use and reconnects (once, transparently) if OpenRGB
+restarts; with OpenRGB down the RPCs fail with `UNAVAILABLE`.
+
+```fish
+dys rgb                              # devices, their modes and settings (* = active mode)
+dys rgb set controller '#ff8800'     # device = id or a unique part of its name
+dys rgb set controller off
+dys rgb mode controller rainbow --speed 3
+dys rgb mode controller static --color '#00ff88' --brightness 60
+```
+
+Software effects, for devices whose own effect modes don't work (the NZXT RGB controller only
+animates "Static" with OpenRGB 1.0, also from OpenRGB's own CLI): dysd computes the frames and
+pushes them with `UPDATELEDS` at about 20 fps.
+
+```fish
+dys rgb effect controller rainbow --speed 6
+dys rgb effect controller breathing --color '#00aaff' --brightness 40
+dys rgb effect controller wave --color '#ff2200'
+dys rgb effect controller none        # stop, keep the last frame
+```
+
+- Starting one switches the device to its per-LED mode ("Direct"). Any `dys rgb set` / `mode` on
+  that device stops its effect. One effect per device.
+- Effects live in dysd only: they end when dysd restarts or the OpenRGB connection is lost.
+- Cost: continuous USB writes to the controller and a little CPU while an effect runs.
+
+Notes:
+- Only SDK protocol 6 (OpenRGB 1.0 or newer). Older servers are refused with a clear error.
+- Device ids are OpenRGB's own unique ids; list first, don't hard-code them.
+- OpenRGB answers a mode change it dislikes (wrong speed range, a direction the mode lacks, ...)
+  with ACK "OK" and changes nothing. `dys-openrgb` checks the same rules locally and reads the
+  device back after every mode change, so such a call fails loudly instead of "succeeding".
+- dysd does not save or reapply lighting (unlike the GPU limit); what a device shows after a reboot is up to OpenRGB.
 
 ## Dev test (fish, no root, local state)
 

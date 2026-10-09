@@ -42,7 +42,12 @@ impl Daemon {
         let server_key_pem = read(&state.server_key())?;
         let server_cert_der = dys_tls::cert_pem_to_der(&server_cert_pem)?;
         let allowlist = Arc::new(RwLock::new(Allowlist::load(&state.clients())?));
-        let actions = Arc::new(Actions::new(Arc::new(SystemRunner), Paths::new(state.path())));
+        let mut actions = Actions::new(Arc::new(SystemRunner), Paths::new(state.path()));
+        // Dev/testing: another OpenRGB SDK server than 127.0.0.1:6742.
+        if let Some(addr) = std::env::var_os("DYSD_OPENRGB_ADDR") {
+            actions = actions.with_openrgb_addr(addr.to_string_lossy());
+        }
+        let actions = Arc::new(actions);
         Ok(Self {
             state,
             cfg,

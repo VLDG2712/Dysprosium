@@ -19,6 +19,18 @@ service System {
   // Starts dysd-update.service (pacman -Syu, repo packages only). LAN or local socket only.
   rpc ApplyUpdates(ApplyUpdatesRequest) returns (UpdateStatus);
   rpc GetUpdateStatus(GetUpdateStatusRequest) returns (UpdateStatus);
+
+  // RGB lighting, through the local OpenRGB SDK server (127.0.0.1:6742, protocol 6).
+  // Device ids are OpenRGB's own unique ids: list first, don't hard-code them.
+  rpc ListRgbDevices(ListRgbDevicesRequest) returns (RgbDeviceList);
+  // One solid colour on the whole device, or off.
+  rpc SetRgbColor(SetRgbColorRequest) returns (RgbDevice);
+  // Switch to a mode (effect) and change its speed/brightness/direction/colours.
+  rpc SetRgbMode(SetRgbModeRequest) returns (RgbDevice);
+  // Software effect computed by dysd and pushed to the LEDs ~20x/s (for devices whose own effect
+  // modes don't work). Any SetRgbColor/SetRgbMode on the device stops it; effect "none" stops it
+  // and leaves the last frame. Effects do not survive a dysd restart.
+  rpc SetRgbEffect(SetRgbEffectRequest) returns (RgbDevice);
 }
 
 message PingRequest {}
@@ -108,6 +120,84 @@ message UpdateStatus {
   repeated string log_tail = 5;
   // The last run upgraded the kernel, NVIDIA driver or systemd.
   bool reboot_recommended = 6;
+}
+
+message ListRgbDevicesRequest {}
+
+message RgbDeviceList {
+  repeated RgbDevice devices = 1;
+  // Names accepted by SetRgbEffect.
+  repeated string software_effects = 2;
+}
+
+message RgbDevice {
+  uint32 id = 1;
+  string name = 2;
+  string vendor = 3;
+  string location = 4;
+  // OpenRGB DEVICE_TYPE_* (0 motherboard, 1 DRAM, 2 GPU, 3 cooler, 4 LED strip, 5 keyboard, ...).
+  int32 kind = 5;
+  uint32 led_count = 6;
+  // Index into `modes`.
+  int32 active_mode = 7;
+  repeated RgbMode modes = 8;
+  // Last known colour of every LED, 0xRRGGBB.
+  repeated uint32 led_colors = 9;
+  // Software effect currently running on this device ("" = none).
+  string software_effect = 10;
+}
+
+message RgbMode {
+  string name = 1;
+  // OpenRGB MODE_FLAG_* bits: 0 speed, 1 left/right, 2 up/down, 3 horizontal/vertical direction,
+  // 4 brightness, 5 per-LED colours, 6 mode colours, 7 random colour.
+  uint32 flags = 2;
+  uint32 speed_min = 3;
+  uint32 speed_max = 4;
+  uint32 speed = 5;
+  uint32 brightness_min = 6;
+  uint32 brightness_max = 7;
+  uint32 brightness = 8;
+  uint32 colors_min = 9;
+  uint32 colors_max = 10;
+  // 0 left, 1 right, 2 up, 3 down, 4 horizontal, 5 vertical.
+  uint32 direction = 11;
+  // The mode's own colours (0xRRGGBB); only meaningful if flag 6 is set.
+  repeated uint32 colors = 12;
+}
+
+message SetRgbColorRequest {
+  uint32 device_id = 1;
+  // 0xRRGGBB. Ignored when `off` is set.
+  uint32 rgb = 2;
+  bool off = 3;
+}
+
+message SetRgbEffectRequest {
+  uint32 device_id = 1;
+  // One of RgbDeviceList.software_effects, or "none".
+  string effect = 2;
+  // 1 (slow) .. 10 (fast); 0 = default (5).
+  uint32 speed = 3;
+  // 1..100 %; 0 = 100.
+  uint32 brightness = 4;
+  // 0xRRGGBB for breathing/wave (default white); rainbow ignores it.
+  optional uint32 rgb = 5;
+}
+
+message RgbColors {
+  repeated uint32 rgb = 1;
+}
+
+message SetRgbModeRequest {
+  uint32 device_id = 1;
+  // Index into RgbDevice.modes.
+  uint32 mode_index = 2;
+  // Unset = keep the mode's current value. Setting something the mode doesn't have is an error.
+  optional uint32 speed = 3;
+  optional uint32 brightness = 4;
+  optional uint32 direction = 5;
+  optional RgbColors colors = 6;
 }
 
 // Served ONLY on the short-lived pairing listener (server-auth TLS, no client cert), which exists
