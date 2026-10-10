@@ -173,6 +173,11 @@ async fn serve(state: StateDir, listen: SocketAddr, socket: PathBuf, cfg: Config
         let actions = d.actions.clone();
         tokio::spawn(async move { actions.reapply_saved_gpu_limit().await });
     }
+    // Saved lighting: reapplied on every new OpenRGB connection; changes written shortly after.
+    d.actions.rgb().spawn_keeper(dysd::rgb::KeeperTiming::default());
+    d.actions.rgb().spawn_flusher();
+    // Push alerts through ntfy ([alerts] in dysd.toml).
+    tokio::spawn(d.actions.alerter().clone().run(d.actions.clone()));
 
     let tcp = server::bind(listen).await?;
     let uds = local::bind(&socket)?;
@@ -180,5 +185,6 @@ async fn serve(state: StateDir, listen: SocketAddr, socket: PathBuf, cfg: Config
         server::serve(tcp, tls, d.allowlist.clone(), d.actions.clone(), cancel.clone().cancelled_owned()),
         local::serve(uds, socket, d.clone(), cancel.clone().cancelled_owned()),
     )?;
+    d.actions.rgb().flush();
     Ok(())
 }

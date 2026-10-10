@@ -3,9 +3,14 @@
 //!   dysd-gpu-limit@<W>.service   nvidia-smi --power-limit=<W>
 //!   dysd-reboot-windows.service  BootNext = Windows Boot Manager, reboot
 //!   dysd-update.service          pacman -Syu --noconfirm (repo packages only)
+//! Reboot/shutdown/sleep go straight to logind (login1 polkit actions allowed for dysd).
 
 pub mod gpu;
+pub mod info;
+pub mod minecraft;
 pub mod net;
+pub mod power;
+pub mod profiles;
 pub mod runner;
 pub mod updates;
 
@@ -20,8 +25,12 @@ use tokio::sync::Mutex;
 use tonic::Status;
 use tracing::{info, warn};
 
+use crate::alerts::Alerter;
+use crate::config::Config;
+use crate::cooling::Cooling;
 use crate::rgb::RgbHub;
 use crate::state::write_atomic;
+use crate::stats::{Sampler, Sources, StatsHub};
 use runner::{Runner, args};
 
 pub const REBOOT_UNIT: &str = "dysd-reboot-windows.service";
@@ -35,6 +44,10 @@ const CACHE_TTL: Duration = Duration::from_secs(600);
 pub struct Paths {
     /// Saved GPU limit (in the state dir).
     pub gpu_saved: PathBuf,
+    /// Saved RGB lighting (in the state dir).
+    pub rgb_saved: PathBuf,
+    /// Profiles (in the state dir).
+    pub profiles: PathBuf,
     /// pacman output of the last dysd-update run (StandardOutput= of the unit).
     pub update_log: PathBuf,
     /// `<result> <exit status> <unix>` written by the unit's ExecStopPost.
@@ -47,6 +60,8 @@ impl Paths {
         let logs = std::env::var_os("DYSD_LOG_DIR").map_or_else(|| PathBuf::from("/var/log/dysd"), PathBuf::from);
         Self {
             gpu_saved: state_dir.join("gpu.json"),
+            rgb_saved: state_dir.join("rgb.json"),
+            profiles: state_dir.join("profiles.json"),
             update_log: logs.join("update.log"),
             update_status: logs.join("update.status"),
         }
@@ -67,6 +82,18 @@ pub struct Actions {
     check_cache: Mutex<Option<(Instant, UpdateList)>>,
     /// OpenRGB connection (RGB lighting).
     rgb: RgbHub,
+    config: Config,
+    cooling: Arc<Cooling>,
+    stats: Arc<StatsHub>,
+    /// "restart in 30 s" while a warned Minecraft stop/restart is pending.
+    mc_pending: std::sync::Mutex<Option<String>>,
+    /// Serialises profile file changes.
+    profile_lock: Mutex<()>,
+    alerter: Arc<Alerter>,
+    /// Pause between answering a Power call and acting on it.
+    power_delay: Duration,
+    /// GetInfo cache + where it reads from.
+    info: info::InfoCache,
 }
 
 fn now_unix() -> u64 {
@@ -79,19 +106,81 @@ fn internal(e: impl std::fmt::Display) -> Status {
 
 impl Actions {
     pub fn new(runner: Arc<dyn Runner>, paths: Paths) -> Self {
+        let config = Config::default();
+        let cooling = Arc::new(Cooling::new(config.cooling.nzxt_socket.clone(), config.cooling.allow_mode_changes));
+        let stats = StatsHub::new(Sampler::new(Sources::default(), runner.clone()), Some(cooling.clone()));
         Self {
-            runner,
-            paths,
             gpu_lock: Mutex::new(()),
             check_cache: Mutex::new(None),
-            rgb: RgbHub::new(crate::rgb::DEFAULT_ADDR),
+            rgb: RgbHub::new(crate::rgb::DEFAULT_ADDR, Some(paths.rgb_saved.clone())),
+            paths,
+            config,
+            cooling,
+            stats,
+            mc_pending: std::sync::Mutex::new(None),
+            profile_lock: Mutex::new(()),
+            alerter: Alerter::new(None),
+            power_delay: Duration::from_millis(1500),
+            info: info::InfoCache::new(info::Root::default()),
+            runner,
         }
+    }
+
+    /// Settings from /etc/dysd/dysd.toml.
+    #[must_use]
+    pub fn with_config(mut self, config: Config) -> Self {
+        self.cooling = Arc::new(Cooling::new(config.cooling.nzxt_socket.clone(), config.cooling.allow_mode_changes));
+        self.stats = StatsHub::new(Sampler::new(Sources::default(), self.runner.clone()), Some(self.cooling.clone()));
+        self.alerter = Alerter::new(config.alerts.clone());
+        self.config = config;
+        self
+    }
+
+    pub fn alerter(&self) -> &Arc<Alerter> {
+        &self.alerter
+    }
+
+    /// Read /proc and /sys elsewhere (tests).
+    #[must_use]
+    pub fn with_stats_sources(mut self, src: Sources) -> Self {
+        self.stats = StatsHub::new(Sampler::new(src, self.runner.clone()), Some(self.cooling.clone()));
+        self
+    }
+
+    /// Act on Power calls after `d` (tests).
+    #[must_use]
+    pub fn with_power_delay(mut self, d: Duration) -> Self {
+        self.power_delay = d;
+        self
+    }
+
+    /// Read /etc, /proc, /sys, /var/lib/pacman under another root (tests).
+    #[must_use]
+    pub fn with_info_root(mut self, root: info::Root) -> Self {
+        self.info = info::InfoCache::new(root);
+        self
+    }
+
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
+    pub fn cooling(&self) -> &Arc<Cooling> {
+        &self.cooling
+    }
+
+    pub fn stats(&self) -> &Arc<StatsHub> {
+        &self.stats
+    }
+
+    pub fn runner(&self) -> Arc<dyn Runner> {
+        self.runner.clone()
     }
 
     /// Use another OpenRGB SDK address than 127.0.0.1:6742.
     #[must_use]
     pub fn with_openrgb_addr(mut self, addr: impl Into<String>) -> Self {
-        self.rgb = RgbHub::new(addr);
+        self.rgb = RgbHub::new(addr, Some(self.paths.rgb_saved.clone()));
         self
     }
 
@@ -107,16 +196,21 @@ impl Actions {
 
     /// `systemctl start` through polkit. `wait=false` returns once the job is queued.
     async fn start_unit(&self, unit: &str, wait: bool) -> Result<(), Status> {
+        self.unit_verb("start", unit, wait).await
+    }
+
+    /// `systemctl <verb>` through polkit (50-dysd.rules decides which verb/unit pairs are allowed).
+    async fn unit_verb(&self, verb: &str, unit: &str, wait: bool) -> Result<(), Status> {
         let out = if wait {
-            self.systemctl(&["start", unit], SHORT).await?
+            self.systemctl(&[verb, unit], SHORT).await?
         } else {
-            self.systemctl(&["start", "--no-block", unit], SHORT).await?
+            self.systemctl(&[verb, "--no-block", unit], SHORT).await?
         };
         if out.ok() {
             Ok(())
         } else {
             let msg = out.error_text();
-            warn!(unit, %msg, "systemctl start failed");
+            warn!(unit, verb, %msg, "systemctl failed");
             // "Access denied" / "Interactive authentication required" = polkit rule not installed.
             if msg.contains("ccess denied") || msg.contains("authentication required") {
                 Err(Status::permission_denied(format!(
@@ -224,6 +318,49 @@ impl Actions {
         self.start_unit(REBOOT_UNIT, false).await
     }
 
+    // ---- power ---------------------------------------------------------------------------
+
+    /// Check with logind, then act after `power_delay` in the background. Returns the delay.
+    pub async fn power(&self, op: power::Op, confirm: bool) -> Result<Duration, Status> {
+        if !confirm {
+            return Err(Status::invalid_argument(format!("{} not confirmed", op.noun())));
+        }
+        let (can, act) = op.methods();
+        let out = self.runner.run("busctl", &power::busctl_args(can, &[]), SHORT).await.map_err(internal)?;
+        if !out.ok() {
+            return Err(Status::failed_precondition(format!("logind {can}: {}", out.error_text())));
+        }
+        let answer = power::parse_can(&out.stdout)
+            .ok_or_else(|| Status::internal(format!("logind {can}: unparseable reply {:?}", out.stdout.trim())))?;
+        let blocked_by = if answer.contains("inhibit") {
+            match self.runner.run("busctl", &power::busctl_args("ListInhibitors", &[]), SHORT).await {
+                Ok(o) if o.ok() => power::blockers(op, &power::parse_inhibitors(&o.stdout)),
+                _ => Vec::new(),
+            }
+        } else {
+            Vec::new()
+        };
+        power::check(op, &answer, &blocked_by)?;
+
+        info!(op = op.noun(), delay_ms = self.power_delay.as_millis() as u64, "power action accepted");
+        let (runner, delay) = (self.runner.clone(), self.power_delay);
+        tokio::spawn(async move {
+            tokio::time::sleep(delay).await;
+            match runner.run("busctl", &power::busctl_args(act, &["b", "false"]), SHORT).await {
+                Ok(o) if o.ok() => info!(op = act, "logind accepted"),
+                Ok(o) => warn!(op = act, err = %o.error_text(), "logind refused"),
+                Err(e) => warn!(op = act, "busctl failed: {e:#}"),
+            }
+        });
+        Ok(self.power_delay)
+    }
+
+    // ---- info ----------------------------------------------------------------------------
+
+    pub async fn info(&self, refresh: bool) -> dys_core::pb::SystemInfo {
+        self.info.get(self.runner.as_ref(), refresh).await
+    }
+
     // ---- updates -------------------------------------------------------------------------
 
     pub async fn check_updates(&self, force: bool) -> Result<UpdateList, Status> {
@@ -323,6 +460,8 @@ mod tests {
         let fake = Arc::new(FakeRunner::default());
         let paths = Paths {
             gpu_saved: dir.path().join("gpu.json"),
+            rgb_saved: dir.path().join("rgb.json"),
+            profiles: dir.path().join("profiles.json"),
             update_log: dir.path().join("update.log"),
             update_status: dir.path().join("update.status"),
         };
@@ -386,6 +525,43 @@ mod tests {
         assert!(f.calls().is_empty());
         a.reboot_to_windows(true).await.unwrap();
         assert_eq!(f.calls(), ["systemctl --no-ask-password start --no-block dysd-reboot-windows.service"]);
+    }
+
+    const CAN_YES: &str = "{\"type\":\"s\",\"data\":[\"yes\"]}\n";
+
+    #[tokio::test]
+    async fn power_checks_logind_answers_then_acts_after_the_delay() {
+        let (f, a, _d) = setup();
+        let a = a.with_power_delay(Duration::from_millis(50));
+        assert_eq!(a.power(power::Op::Shutdown, false).await.unwrap_err().code(), Code::InvalidArgument);
+        assert!(f.calls().is_empty());
+
+        f.on("busctl --system --json=short call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager CanPowerOff", out(0, CAN_YES, ""));
+        f.on("busctl --system --json=short call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager PowerOff", out(0, "{}", ""));
+        let d = a.power(power::Op::Shutdown, true).await.unwrap();
+        assert_eq!(d, Duration::from_millis(50));
+        assert_eq!(f.calls().len(), 1, "replies before acting");
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert!(f.calls()[1].ends_with("org.freedesktop.login1.Manager PowerOff b false"), "{:?}", f.calls());
+    }
+
+    #[tokio::test]
+    async fn power_refusals_name_the_reason_and_never_act() {
+        let (f, a, _d) = setup();
+        let a = a.with_power_delay(Duration::from_millis(10));
+        f.on("busctl --system --json=short call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager CanSuspend",
+            out(0, "{\"type\":\"s\",\"data\":[\"inhibitor-blocked\"]}", ""));
+        f.on("busctl --system --json=short call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ListInhibitors",
+            out(0, r#"{"type":"a(ssssuu)","data":[[["sleep","Steam","Downloading","block",1000,42]]]}"#, ""));
+        let e = a.power(power::Op::Sleep, true).await.unwrap_err();
+        assert_eq!(e.message(), "sleep blocked by Steam (Downloading)");
+
+        f.on("busctl --system --json=short call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager CanReboot",
+            out(0, "{\"type\":\"s\",\"data\":[\"challenge\"]}", ""));
+        assert_eq!(a.power(power::Op::Reboot, true).await.unwrap_err().code(), Code::PermissionDenied);
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        assert!(!f.calls().iter().any(|c| c.ends_with(" b false")), "{:?}", f.calls());
     }
 
     #[tokio::test]

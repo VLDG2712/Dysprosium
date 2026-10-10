@@ -10,7 +10,7 @@
 | `dys-tls` | private CA, server/client certs, CSR signing, fingerprints, SAN parsing |
 | `dys-openrgb` | async client for the OpenRGB SDK server (protocol 6 / OpenRGB 1.0+); no tonic, usable on its own |
 | `dysd` | mTLS server + allowlist, pairing listener, local admin socket, `init`/`serve`/`dev-client`/`clients` |
-| `dys` | `ping`, `pair` (terminal QR), `clients`, `gpu`, `updates`, `rgb`, `reboot-windows` over the admin socket |
+| `dys` | `ping`, `pair` (terminal QR), `clients`, `gpu`, `updates`, `rgb`, `stats`, `info`, `cooling`, `profile`, `mc`, `alerts`, `power`, `reboot-windows` over the admin socket |
 
 Build needs `protoc`. TLS backend: rustls + ring (no aws-lc).
 
@@ -39,6 +39,9 @@ IP/name: `dysd init --san …` (the list is saved in `sans.json` and reused by l
 
 dysd runs unprivileged. Root actions are fixed systemd units that polkit
 (`packaging/50-dysd.rules`) lets **only the `dysd` user start**: no stop/edit, no other units.
+Reboot / shutdown / sleep go to logind directly; the same rules file grants user `dysd` the
+`org.freedesktop.login1.{reboot,power-off,suspend}` actions (+ `-multiple-sessions`), never
+`-ignore-inhibit`.
 
 | Action | Unit | Notes |
 |---|---|---|
@@ -46,6 +49,7 @@ dysd runs unprivileged. Root actions are fixed systemd units that polkit
 | Reboot to Windows | `dysd-reboot-windows.service` → `/usr/lib/dysd/reboot-to-windows` | Finds the "Windows Boot Manager" entry by label, sets BootNext, checks it stuck, reboots. Phone always asks first. |
 | Apply updates | `dysd-update.service` → `pacman -Syu --noconfirm` | Repo packages only. Refused unless the caller is on the LAN (or the admin socket). Output in `/var/log/dysd/update.log`, result in `update.status`. |
 | Check updates | (none, runs as dysd) | `checkupdates` + `yay -Qua`, cached 10 min. |
+| Reboot / shut down / sleep | (none: logind `Reboot`/`PowerOff`/`Suspend` via `busctl`) | dysd asks logind first (`CanReboot` etc.): polkit missing, unsupported, or an app holding a block inhibitor (named in the error) refuse it before anything happens. Then it replies and acts 1.5 s later. Allowed away from home; the phone warns that waking it again needs Home Assistant over Tailscale, and about Minecraft players online. |
 
 ```fish
 dys gpu                     # limits, draw, saved value
@@ -54,6 +58,8 @@ dys updates                 # cached check;  dys updates check  = fresh
 dys updates apply           # asks, then follows the pacman output
 dys updates status -n 50
 dys reboot-windows          # asks first
+dys power reboot            # or shutdown / sleep; asks first (-y to skip)
+dys info                    # OS, kernel, shell, desktop, CPU, GPU, RAM, disks, network
 ```
 
 ## RGB (OpenRGB)
@@ -83,7 +89,8 @@ dys rgb effect controller none        # stop, keep the last frame
 
 - Starting one switches the device to its per-LED mode ("Direct"). Any `dys rgb set` / `mode` on
   that device stops its effect. One effect per device.
-- Effects live in dysd only: they end when dysd restarts or the OpenRGB connection is lost.
+- Effects are computed by dysd, so they pause while dysd or OpenRGB restarts and resume from the
+  saved state (below).
 - Cost: continuous USB writes to the controller and a little CPU while an effect runs.
 
 Notes:
@@ -92,7 +99,62 @@ Notes:
 - OpenRGB answers a mode change it dislikes (wrong speed range, a direction the mode lacks, ...)
   with ACK "OK" and changes nothing. `dys-openrgb` checks the same rules locally and reads the
   device back after every mode change, so such a call fails loudly instead of "succeeding".
-- dysd does not save or reapply lighting (unlike the GPU limit); what a device shows after a reboot is up to OpenRGB.
+
+### Saved lighting
+
+Every change made through dysd (phone or `dys rgb`: colour, off, mode, effect) is saved per device
+in `/var/lib/dysd/rgb.json` (written ~1 s after the last change, and on shutdown). dysd reapplies it
+whenever it gets a new OpenRGB connection: after boot, a dysd restart, or an OpenRGB restart. It
+checks every 2 s for the first 2 minutes (OpenRGB is still detecting devices), then every 15 s.
+
+- Devices are matched by type, name, vendor, serial and location, not by OpenRGB's runtime id
+  (which can change between boots). If the location changed (`/dev/hidrawN` renumbered) the
+  device is still found as long as the match is unambiguous; two identical devices whose
+  locations both changed are skipped and logged.
+- `dys rgb effect <dev> none` forgets that device (nothing is reapplied for it).
+- Changes made in OpenRGB's own GUI are not seen by dysd: the next reconnect/boot reapplies the
+  dysd state. To stop dysd reapplying anything: `sudo rm /var/lib/dysd/rgb.json` and restart dysd.
+- With nothing saved, dysd doesn't connect to OpenRGB until the first RGB request.
+- Log lines: `journalctl -u dysd | grep -i "lighting"`.
+
+## Stats, cooling, profiles, Minecraft, alerts
+
+Optional settings live in `/etc/dysd/dysd.toml` (example: `packaging/dysd.toml.example`; root:dys
+0640; `systemctl restart dysd` after editing). A missing file means those features report "not
+configured"; a file with a typo makes dysd refuse to start (see `journalctl -u dysd`).
+
+```fish
+dys stats                         # CPU/RAM/GPU/disks/network/temps/top processes
+dys cooling                       # nzxt-ctl: liquid temp, pump/fan rpm + duty, mode, failsafe
+dys cooling mode silent           # needs [cooling] allow_mode_changes = true + nzxt-ctl with SetMode
+dys profile save Gaming --gpu --fan --rgb
+dys profile apply gaming          # per-part result (gpu / fan / rgb)
+dys mc                            # atm10.service state, players, TPS (RCON)
+dys mc restart --warn 30          # announces in chat, restarts 30 s later
+dys alerts test                   # ntfy test notification
+```
+
+- **Stats** (`GetStats`, `WatchStats` at 1/s): /proc, /sys, nvidia-smi (every 2 s), nzxt-ctl. The
+  sandbox hides /home, so a separate /home filesystem is missing from the mount list (its disk still
+  shows I/O and temperature).
+- **Cooling**: nzxt-ctl owns pump/fans; dysd only reads its state and asks it to switch mode
+  (`SetMode`, see `contrib/nzxt-ctl-setmode.patch`). nzxt-ctl's failsafe applies in every mode.
+  Silent is refused away from home (the off-LAN floor). dysd joins the `nzxt-ctl` group
+  (`packaging/dysd.sysusers`). nzxt-ctl is GPL-3.0, so its crate is not linked; the wire format is
+  restated in `crates/dysd/src/cooling.rs`.
+- **Profiles** (`/var/lib/dysd/profiles.json`): capture GPU limit, fan mode and the saved lighting;
+  applying sets each part and reports per part.
+- **Minecraft**: systemd state + RCON (`list`, `neoforge tps`); start/stop/restart via polkit
+  (`50-dysd.rules`, unit name in `DYSD_MINECRAFT_UNIT` must match dysd.toml).
+- **Alerts**: ntfy over plain HTTP on the LAN/tailnet (bearer token optional). Checked every 15 s:
+  CPU/GPU/liquid temperature over threshold (re-arms 5 °C below), nzxt-ctl failsafe, update run
+  finished, Minecraft unit failed; one alert per kind per `cooldown_min`.
+- **Info** (`GetInfo`, cached 60 s): /etc/os-release, DMI (board/BIOS, no serials), CPU topology
+  (P/E cores on hybrid Intel), pacman package count, login shell of the desktop user (`loginctl`;
+  only shells listed in /etc/shells are run for `--version`), desktop + version (`pacman -Q`),
+  `nvidia-smi`, /sys/block, `ip -j addr`. Sent as titled label/value sections, so the phone shows
+  new items without an app update.
+- **Wake-on-LAN**: done by the phone through Home Assistant's Wake on LAN entity (dysd is off then): a `button.…` when the integration was added in the UI (pressed), a `switch.…` when configured in YAML (turned on).
 
 ## Dev test (fish, no root, local state)
 
@@ -136,6 +198,8 @@ sudo install -Dm644 -t /usr/lib/systemd/system packaging/dysd.service packaging/
 sudo install -Dm755 -t /usr/lib/dysd packaging/libexec/reboot-to-windows packaging/libexec/record-update-result
 sudo install -Dm644 packaging/50-dysd.rules /usr/share/polkit-1/rules.d/50-dysd.rules
 sudo systemd-sysusers; and sudo systemd-tmpfiles --create /usr/lib/tmpfiles.d/dysd.conf
+# optional settings (Minecraft, alerts, fan modes); edit after installing
+test -e /etc/dysd/dysd.toml; or sudo install -Dm640 -o root -g dys packaging/dysd.toml.example /etc/dysd/dysd.toml
 sudo usermod -aG dys $USER          # log out/in afterwards
 sudo systemctl daemon-reload
 sudo systemctl enable --now dysd    # first start creates CA + server cert

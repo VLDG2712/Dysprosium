@@ -14,11 +14,19 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use dys_core::pb::system_server::{System, SystemServer};
+use dys_core::pb::minecraft_action_request::Action as McAction;
+use dys_core::pb::power_request::Action as PowerAction;
 use dys_core::pb::{
-    ApplyUpdatesRequest, CheckUpdatesRequest, GetGpuRequest, GetUpdateStatusRequest, GpuInfo,
-    ListRgbDevicesRequest, PingReply, PingRequest, RebootToWindowsReply, RebootToWindowsRequest, RgbDevice,
-    RgbDeviceList, SetGpuPowerLimitRequest, SetRgbColorRequest, SetRgbEffectRequest, SetRgbModeRequest, UpdateList, UpdateStatus,
+    AlertStatus, ApplyProfileReply, ApplyProfileRequest, ApplyUpdatesRequest, CheckUpdatesRequest, Cooling,
+    DeleteProfileRequest, GetAlertsRequest, GetCoolingRequest, GetGpuRequest, GetInfoRequest, GetMinecraftRequest,
+    GetStatsRequest, PowerReply, PowerRequest, SystemInfo,
+    GetUpdateStatusRequest, GpuInfo, ListProfilesRequest, ListRgbDevicesRequest, MinecraftActionRequest,
+    MinecraftStatus, PingReply, PingRequest, ProfileList, RebootToWindowsReply, RebootToWindowsRequest, RgbDevice,
+    RgbDeviceList, SaveProfileRequest, SendTestAlertRequest, SetFanModeRequest, SetGpuPowerLimitRequest,
+    SetRgbColorRequest, SetRgbEffectRequest, SetRgbModeRequest, Stats, UpdateList, UpdateStatus, WatchStatsRequest,
 };
+use std::pin::Pin;
+use tokio_stream::{Stream, StreamExt, wrappers::WatchStream};
 use tokio::net::TcpListener;
 use tonic::service::Interceptor;
 use tonic::transport::server::TcpIncoming;
@@ -26,7 +34,7 @@ use tonic::transport::{Certificate, Identity, Server, ServerTlsConfig};
 use tonic::{Request, Response, Status};
 use tracing::{info, warn};
 
-use crate::actions::{Actions, net};
+use crate::actions::{Actions, net, power};
 pub use crate::daemon::SharedAllowlist;
 use crate::state::{StateDir, read};
 
@@ -174,6 +182,98 @@ impl System for SystemSvc {
         info!(by = %who(&req), device = req.get_ref().device_id, mode = req.get_ref().mode_index, "SetRgbMode");
         Ok(Response::new(self.actions.rgb().set_mode(req.into_inner()).await?))
     }
+
+    async fn get_stats(&self, _req: Request<GetStatsRequest>) -> Result<Response<Stats>, Status> {
+        Ok(Response::new((*self.actions.stats().snapshot().await).clone()))
+    }
+
+    type WatchStatsStream = Pin<Box<dyn Stream<Item = Result<Stats, Status>> + Send + 'static>>;
+
+    async fn watch_stats(&self, req: Request<WatchStatsRequest>) -> Result<Response<Self::WatchStatsStream>, Status> {
+        info!(by = %who(&req), "WatchStats");
+        let rx = self.actions.stats().subscribe();
+        let stream = WatchStream::new(rx).filter_map(|s| s.map(|s| Ok((*s).clone())));
+        Ok(Response::new(Box::pin(stream)))
+    }
+
+    async fn get_cooling(&self, _req: Request<GetCoolingRequest>) -> Result<Response<Cooling>, Status> {
+        Ok(Response::new(self.actions.cooling().info().await))
+    }
+
+    async fn set_fan_mode(&self, req: Request<SetFanModeRequest>) -> Result<Response<Cooling>, Status> {
+        let mode = req.get_ref().mode.trim().to_ascii_lowercase();
+        info!(by = %who(&req), %mode, "SetFanMode");
+        check_fan_mode_location(&mode, from_lan(&req))?;
+        let st = self.actions.cooling().set_mode(&mode).await?;
+        Ok(Response::new(self.actions.cooling().to_pb(&st)))
+    }
+
+    async fn list_profiles(&self, _req: Request<ListProfilesRequest>) -> Result<Response<ProfileList>, Status> {
+        Ok(Response::new(self.actions.list_profiles()))
+    }
+
+    async fn save_profile(&self, req: Request<SaveProfileRequest>) -> Result<Response<ProfileList>, Status> {
+        info!(by = %who(&req), name = %req.get_ref().name, "SaveProfile");
+        let r = req.into_inner();
+        Ok(Response::new(self.actions.save_profile(&r.name, r.include_gpu, r.include_fan, r.include_rgb).await?))
+    }
+
+    async fn delete_profile(&self, req: Request<DeleteProfileRequest>) -> Result<Response<ProfileList>, Status> {
+        info!(by = %who(&req), name = %req.get_ref().name, "DeleteProfile");
+        Ok(Response::new(self.actions.delete_profile(&req.into_inner().name).await?))
+    }
+
+    async fn apply_profile(&self, req: Request<ApplyProfileRequest>) -> Result<Response<ApplyProfileReply>, Status> {
+        info!(by = %who(&req), name = %req.get_ref().name, "ApplyProfile");
+        let lan = from_lan(&req);
+        Ok(Response::new(self.actions.apply_profile(&req.into_inner().name, lan).await?))
+    }
+
+    async fn get_minecraft(&self, _req: Request<GetMinecraftRequest>) -> Result<Response<MinecraftStatus>, Status> {
+        Ok(Response::new(self.actions.minecraft().await?))
+    }
+
+    async fn minecraft_action(&self, req: Request<MinecraftActionRequest>) -> Result<Response<MinecraftStatus>, Status> {
+        let r = req.get_ref();
+        let action = McAction::try_from(r.action).map_err(|_| Status::invalid_argument("unknown action"))?;
+        info!(by = %who(&req), ?action, warn = r.warn_seconds, "MinecraftAction");
+        let (confirm, warn) = (r.confirm, r.warn_seconds);
+        Ok(Response::new(self.actions.minecraft_action(action, confirm, warn).await?))
+    }
+
+    async fn get_alerts(&self, _req: Request<GetAlertsRequest>) -> Result<Response<AlertStatus>, Status> {
+        Ok(Response::new(self.actions.alerter().status()))
+    }
+
+    async fn send_test_alert(&self, req: Request<SendTestAlertRequest>) -> Result<Response<AlertStatus>, Status> {
+        info!(by = %who(&req), "SendTestAlert");
+        Ok(Response::new(self.actions.alerter().test().await?))
+    }
+
+    async fn power(&self, req: Request<PowerRequest>) -> Result<Response<PowerReply>, Status> {
+        let r = req.get_ref();
+        let op = match PowerAction::try_from(r.action) {
+            Ok(PowerAction::Reboot) => power::Op::Reboot,
+            Ok(PowerAction::Shutdown) => power::Op::Shutdown,
+            Ok(PowerAction::Sleep) => power::Op::Sleep,
+            _ => return Err(Status::invalid_argument("action must be REBOOT, SHUTDOWN or SLEEP")),
+        };
+        info!(by = %who(&req), op = op.noun(), lan = from_lan(&req), "Power");
+        let delay = self.actions.power(op, r.confirm).await?;
+        Ok(Response::new(PowerReply { delay_ms: u32::try_from(delay.as_millis()).unwrap_or(u32::MAX) }))
+    }
+
+    async fn get_info(&self, req: Request<GetInfoRequest>) -> Result<Response<SystemInfo>, Status> {
+        Ok(Response::new(self.actions.info(req.get_ref().refresh).await))
+    }
+}
+
+/// Away from home, Silent (fixed low duty) is refused: the off-LAN floor for fan speed.
+pub fn check_fan_mode_location(mode: &str, lan: bool) -> Result<(), Status> {
+    if mode == "silent" && !lan {
+        return Err(Status::permission_denied("Silent mode can only be selected from the home network"));
+    }
+    Ok(())
 }
 
 /// TLS config for the main listener: our server cert, client certs required and checked

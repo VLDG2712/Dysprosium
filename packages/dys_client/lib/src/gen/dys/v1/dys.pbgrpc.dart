@@ -114,12 +114,127 @@ class SystemClient extends $grpc.Client {
 
   /// Software effect computed by dysd and pushed to the LEDs ~20x/s (for devices whose own effect
   /// modes don't work). Any SetRgbColor/SetRgbMode on the device stops it; effect "none" stops it
-  /// and leaves the last frame. Effects do not survive a dysd restart.
+  /// and leaves the last frame. Colour, mode and effect changes are saved per device by dysd and
+  /// reapplied after boot, a dysd restart or an OpenRGB restart ("none" forgets the device).
   $grpc.ResponseFuture<$0.RgbDevice> setRgbEffect(
     $0.SetRgbEffectRequest request, {
     $grpc.CallOptions? options,
   }) {
     return $createUnaryCall(_$setRgbEffect, request, options: options);
+  }
+
+  /// Live system stats. Read-only, no privileges. WatchStats sends one sample per second while the
+  /// stream is open (all watchers share one sampler); GetStats returns one sample.
+  $grpc.ResponseFuture<$0.Stats> getStats(
+    $0.GetStatsRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getStats, request, options: options);
+  }
+
+  $grpc.ResponseStream<$0.Stats> watchStats(
+    $0.WatchStatsRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$watchStats, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
+  /// Pump/fan through nzxt-ctl's socket. Reading needs nothing; SetFanMode needs nzxt-ctl with the
+  /// SetMode request and `[cooling] allow_mode_changes = true` in /etc/dysd/dysd.toml.
+  $grpc.ResponseFuture<$0.Cooling> getCooling(
+    $0.GetCoolingRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getCooling, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.Cooling> setFanMode(
+    $0.SetFanModeRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$setFanMode, request, options: options);
+  }
+
+  /// Profiles: named snapshots of GPU limit + fan mode + lighting, applied in one call.
+  $grpc.ResponseFuture<$0.ProfileList> listProfiles(
+    $0.ListProfilesRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$listProfiles, request, options: options);
+  }
+
+  /// Captures the current state of the selected parts under `name` (replaces a profile of that name).
+  $grpc.ResponseFuture<$0.ProfileList> saveProfile(
+    $0.SaveProfileRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$saveProfile, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.ProfileList> deleteProfile(
+    $0.DeleteProfileRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$deleteProfile, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.ApplyProfileReply> applyProfile(
+    $0.ApplyProfileRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$applyProfile, request, options: options);
+  }
+
+  /// Minecraft server ([minecraft] in /etc/dysd/dysd.toml): systemd state + players over RCON.
+  $grpc.ResponseFuture<$0.MinecraftStatus> getMinecraft(
+    $0.GetMinecraftRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getMinecraft, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.MinecraftStatus> minecraftAction(
+    $0.MinecraftActionRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$minecraftAction, request, options: options);
+  }
+
+  /// ntfy alerts ([alerts] in /etc/dysd/dysd.toml).
+  $grpc.ResponseFuture<$0.AlertStatus> getAlerts(
+    $0.GetAlertsRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getAlerts, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.AlertStatus> sendTestAlert(
+    $0.SendTestAlertRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$sendTestAlert, request, options: options);
+  }
+
+  /// Reboot, shut down or suspend through logind (polkit: 50-dysd.rules allows these login1
+  /// actions for user dysd, never the -ignore-inhibit variants). dysd checks with logind first
+  /// (CanReboot/CanPowerOff/CanSuspend), answers, then acts after `delay_ms` so the reply gets out.
+  $grpc.ResponseFuture<$0.PowerReply> power(
+    $0.PowerRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$power, request, options: options);
+  }
+
+  /// Static facts about the PC (OS, kernel, shell, desktop, CPU, GPU, RAM, disks, network) as
+  /// titled sections of label/value pairs, so the phone can show new items without an update.
+  /// Cached for 60 s unless `refresh`.
+  $grpc.ResponseFuture<$0.SystemInfo> getInfo(
+    $0.GetInfoRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getInfo, request, options: options);
   }
 
   // method descriptors
@@ -177,6 +292,73 @@ class SystemClient extends $grpc.Client {
           '/dys.v1.System/SetRgbEffect',
           ($0.SetRgbEffectRequest value) => value.writeToBuffer(),
           $0.RgbDevice.fromBuffer);
+  static final _$getStats = $grpc.ClientMethod<$0.GetStatsRequest, $0.Stats>(
+      '/dys.v1.System/GetStats',
+      ($0.GetStatsRequest value) => value.writeToBuffer(),
+      $0.Stats.fromBuffer);
+  static final _$watchStats =
+      $grpc.ClientMethod<$0.WatchStatsRequest, $0.Stats>(
+          '/dys.v1.System/WatchStats',
+          ($0.WatchStatsRequest value) => value.writeToBuffer(),
+          $0.Stats.fromBuffer);
+  static final _$getCooling =
+      $grpc.ClientMethod<$0.GetCoolingRequest, $0.Cooling>(
+          '/dys.v1.System/GetCooling',
+          ($0.GetCoolingRequest value) => value.writeToBuffer(),
+          $0.Cooling.fromBuffer);
+  static final _$setFanMode =
+      $grpc.ClientMethod<$0.SetFanModeRequest, $0.Cooling>(
+          '/dys.v1.System/SetFanMode',
+          ($0.SetFanModeRequest value) => value.writeToBuffer(),
+          $0.Cooling.fromBuffer);
+  static final _$listProfiles =
+      $grpc.ClientMethod<$0.ListProfilesRequest, $0.ProfileList>(
+          '/dys.v1.System/ListProfiles',
+          ($0.ListProfilesRequest value) => value.writeToBuffer(),
+          $0.ProfileList.fromBuffer);
+  static final _$saveProfile =
+      $grpc.ClientMethod<$0.SaveProfileRequest, $0.ProfileList>(
+          '/dys.v1.System/SaveProfile',
+          ($0.SaveProfileRequest value) => value.writeToBuffer(),
+          $0.ProfileList.fromBuffer);
+  static final _$deleteProfile =
+      $grpc.ClientMethod<$0.DeleteProfileRequest, $0.ProfileList>(
+          '/dys.v1.System/DeleteProfile',
+          ($0.DeleteProfileRequest value) => value.writeToBuffer(),
+          $0.ProfileList.fromBuffer);
+  static final _$applyProfile =
+      $grpc.ClientMethod<$0.ApplyProfileRequest, $0.ApplyProfileReply>(
+          '/dys.v1.System/ApplyProfile',
+          ($0.ApplyProfileRequest value) => value.writeToBuffer(),
+          $0.ApplyProfileReply.fromBuffer);
+  static final _$getMinecraft =
+      $grpc.ClientMethod<$0.GetMinecraftRequest, $0.MinecraftStatus>(
+          '/dys.v1.System/GetMinecraft',
+          ($0.GetMinecraftRequest value) => value.writeToBuffer(),
+          $0.MinecraftStatus.fromBuffer);
+  static final _$minecraftAction =
+      $grpc.ClientMethod<$0.MinecraftActionRequest, $0.MinecraftStatus>(
+          '/dys.v1.System/MinecraftAction',
+          ($0.MinecraftActionRequest value) => value.writeToBuffer(),
+          $0.MinecraftStatus.fromBuffer);
+  static final _$getAlerts =
+      $grpc.ClientMethod<$0.GetAlertsRequest, $0.AlertStatus>(
+          '/dys.v1.System/GetAlerts',
+          ($0.GetAlertsRequest value) => value.writeToBuffer(),
+          $0.AlertStatus.fromBuffer);
+  static final _$sendTestAlert =
+      $grpc.ClientMethod<$0.SendTestAlertRequest, $0.AlertStatus>(
+          '/dys.v1.System/SendTestAlert',
+          ($0.SendTestAlertRequest value) => value.writeToBuffer(),
+          $0.AlertStatus.fromBuffer);
+  static final _$power = $grpc.ClientMethod<$0.PowerRequest, $0.PowerReply>(
+      '/dys.v1.System/Power',
+      ($0.PowerRequest value) => value.writeToBuffer(),
+      $0.PowerReply.fromBuffer);
+  static final _$getInfo = $grpc.ClientMethod<$0.GetInfoRequest, $0.SystemInfo>(
+      '/dys.v1.System/GetInfo',
+      ($0.GetInfoRequest value) => value.writeToBuffer(),
+      $0.SystemInfo.fromBuffer);
 }
 
 @$pb.GrpcServiceName('dys.v1.System')
@@ -270,6 +452,113 @@ abstract class SystemServiceBase extends $grpc.Service {
         ($core.List<$core.int> value) =>
             $0.SetRgbEffectRequest.fromBuffer(value),
         ($0.RgbDevice value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetStatsRequest, $0.Stats>(
+        'GetStats',
+        getStats_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GetStatsRequest.fromBuffer(value),
+        ($0.Stats value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.WatchStatsRequest, $0.Stats>(
+        'WatchStats',
+        watchStats_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) => $0.WatchStatsRequest.fromBuffer(value),
+        ($0.Stats value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetCoolingRequest, $0.Cooling>(
+        'GetCooling',
+        getCooling_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GetCoolingRequest.fromBuffer(value),
+        ($0.Cooling value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SetFanModeRequest, $0.Cooling>(
+        'SetFanMode',
+        setFanMode_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.SetFanModeRequest.fromBuffer(value),
+        ($0.Cooling value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ListProfilesRequest, $0.ProfileList>(
+        'ListProfiles',
+        listProfiles_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.ListProfilesRequest.fromBuffer(value),
+        ($0.ProfileList value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SaveProfileRequest, $0.ProfileList>(
+        'SaveProfile',
+        saveProfile_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.SaveProfileRequest.fromBuffer(value),
+        ($0.ProfileList value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.DeleteProfileRequest, $0.ProfileList>(
+        'DeleteProfile',
+        deleteProfile_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.DeleteProfileRequest.fromBuffer(value),
+        ($0.ProfileList value) => value.writeToBuffer()));
+    $addMethod(
+        $grpc.ServiceMethod<$0.ApplyProfileRequest, $0.ApplyProfileReply>(
+            'ApplyProfile',
+            applyProfile_Pre,
+            false,
+            false,
+            ($core.List<$core.int> value) =>
+                $0.ApplyProfileRequest.fromBuffer(value),
+            ($0.ApplyProfileReply value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetMinecraftRequest, $0.MinecraftStatus>(
+        'GetMinecraft',
+        getMinecraft_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.GetMinecraftRequest.fromBuffer(value),
+        ($0.MinecraftStatus value) => value.writeToBuffer()));
+    $addMethod(
+        $grpc.ServiceMethod<$0.MinecraftActionRequest, $0.MinecraftStatus>(
+            'MinecraftAction',
+            minecraftAction_Pre,
+            false,
+            false,
+            ($core.List<$core.int> value) =>
+                $0.MinecraftActionRequest.fromBuffer(value),
+            ($0.MinecraftStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetAlertsRequest, $0.AlertStatus>(
+        'GetAlerts',
+        getAlerts_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GetAlertsRequest.fromBuffer(value),
+        ($0.AlertStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SendTestAlertRequest, $0.AlertStatus>(
+        'SendTestAlert',
+        sendTestAlert_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.SendTestAlertRequest.fromBuffer(value),
+        ($0.AlertStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.PowerRequest, $0.PowerReply>(
+        'Power',
+        power_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.PowerRequest.fromBuffer(value),
+        ($0.PowerReply value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetInfoRequest, $0.SystemInfo>(
+        'GetInfo',
+        getInfo_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GetInfoRequest.fromBuffer(value),
+        ($0.SystemInfo value) => value.writeToBuffer()));
   }
 
   $async.Future<$0.PingReply> ping_Pre(
@@ -360,6 +649,118 @@ abstract class SystemServiceBase extends $grpc.Service {
 
   $async.Future<$0.RgbDevice> setRgbEffect(
       $grpc.ServiceCall call, $0.SetRgbEffectRequest request);
+
+  $async.Future<$0.Stats> getStats_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.GetStatsRequest> $request) async {
+    return getStats($call, await $request);
+  }
+
+  $async.Future<$0.Stats> getStats(
+      $grpc.ServiceCall call, $0.GetStatsRequest request);
+
+  $async.Stream<$0.Stats> watchStats_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.WatchStatsRequest> $request) async* {
+    yield* watchStats($call, await $request);
+  }
+
+  $async.Stream<$0.Stats> watchStats(
+      $grpc.ServiceCall call, $0.WatchStatsRequest request);
+
+  $async.Future<$0.Cooling> getCooling_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.GetCoolingRequest> $request) async {
+    return getCooling($call, await $request);
+  }
+
+  $async.Future<$0.Cooling> getCooling(
+      $grpc.ServiceCall call, $0.GetCoolingRequest request);
+
+  $async.Future<$0.Cooling> setFanMode_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.SetFanModeRequest> $request) async {
+    return setFanMode($call, await $request);
+  }
+
+  $async.Future<$0.Cooling> setFanMode(
+      $grpc.ServiceCall call, $0.SetFanModeRequest request);
+
+  $async.Future<$0.ProfileList> listProfiles_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ListProfilesRequest> $request) async {
+    return listProfiles($call, await $request);
+  }
+
+  $async.Future<$0.ProfileList> listProfiles(
+      $grpc.ServiceCall call, $0.ListProfilesRequest request);
+
+  $async.Future<$0.ProfileList> saveProfile_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.SaveProfileRequest> $request) async {
+    return saveProfile($call, await $request);
+  }
+
+  $async.Future<$0.ProfileList> saveProfile(
+      $grpc.ServiceCall call, $0.SaveProfileRequest request);
+
+  $async.Future<$0.ProfileList> deleteProfile_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.DeleteProfileRequest> $request) async {
+    return deleteProfile($call, await $request);
+  }
+
+  $async.Future<$0.ProfileList> deleteProfile(
+      $grpc.ServiceCall call, $0.DeleteProfileRequest request);
+
+  $async.Future<$0.ApplyProfileReply> applyProfile_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ApplyProfileRequest> $request) async {
+    return applyProfile($call, await $request);
+  }
+
+  $async.Future<$0.ApplyProfileReply> applyProfile(
+      $grpc.ServiceCall call, $0.ApplyProfileRequest request);
+
+  $async.Future<$0.MinecraftStatus> getMinecraft_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.GetMinecraftRequest> $request) async {
+    return getMinecraft($call, await $request);
+  }
+
+  $async.Future<$0.MinecraftStatus> getMinecraft(
+      $grpc.ServiceCall call, $0.GetMinecraftRequest request);
+
+  $async.Future<$0.MinecraftStatus> minecraftAction_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.MinecraftActionRequest> $request) async {
+    return minecraftAction($call, await $request);
+  }
+
+  $async.Future<$0.MinecraftStatus> minecraftAction(
+      $grpc.ServiceCall call, $0.MinecraftActionRequest request);
+
+  $async.Future<$0.AlertStatus> getAlerts_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.GetAlertsRequest> $request) async {
+    return getAlerts($call, await $request);
+  }
+
+  $async.Future<$0.AlertStatus> getAlerts(
+      $grpc.ServiceCall call, $0.GetAlertsRequest request);
+
+  $async.Future<$0.AlertStatus> sendTestAlert_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.SendTestAlertRequest> $request) async {
+    return sendTestAlert($call, await $request);
+  }
+
+  $async.Future<$0.AlertStatus> sendTestAlert(
+      $grpc.ServiceCall call, $0.SendTestAlertRequest request);
+
+  $async.Future<$0.PowerReply> power_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.PowerRequest> $request) async {
+    return power($call, await $request);
+  }
+
+  $async.Future<$0.PowerReply> power(
+      $grpc.ServiceCall call, $0.PowerRequest request);
+
+  $async.Future<$0.SystemInfo> getInfo_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.GetInfoRequest> $request) async {
+    return getInfo($call, await $request);
+  }
+
+  $async.Future<$0.SystemInfo> getInfo(
+      $grpc.ServiceCall call, $0.GetInfoRequest request);
 }
 
 /// Served ONLY on the short-lived pairing listener (server-auth TLS, no client cert), which exists

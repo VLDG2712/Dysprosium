@@ -141,6 +141,91 @@ class DysClient {
         ),
       );
 
+  // ---- stats ---------------------------------------------------------------------------------
+
+  Future<pb.Stats> getStats() =>
+      _call((s, o) => s.getStats(pb.GetStatsRequest(), options: o), timeout: const Duration(seconds: 10));
+
+  /// One sample per second until the subscription is cancelled. Errors arrive as [DysException];
+  /// a broken connection ends the stream with an error (resubscribe to reconnect).
+  Stream<pb.Stats> watchStats() async* {
+    final pb.SystemClient s;
+    try {
+      s = await _connect();
+    } catch (e) {
+      final err = DysException.from(e, pairing: false);
+      await _reset();
+      throw err;
+    }
+    try {
+      yield* s.watchStats(pb.WatchStatsRequest());
+    } catch (e) {
+      final err = DysException.from(e, pairing: false);
+      if (const {DysErrorKind.unreachable, DysErrorKind.timeout, DysErrorKind.notAuthorized, DysErrorKind.other}
+          .contains(err.kind)) {
+        await _reset();
+      }
+      throw err;
+    }
+  }
+
+  // ---- cooling -------------------------------------------------------------------------------
+
+  Future<pb.Cooling> getCooling() => _call((s, o) => s.getCooling(pb.GetCoolingRequest(), options: o));
+
+  /// "performance", "silent" or "auto". Waits until nzxt-ctl reports the new mode.
+  Future<pb.Cooling> setFanMode(String mode) => _call(
+      (s, o) => s.setFanMode(pb.SetFanModeRequest(mode: mode), options: o),
+      timeout: const Duration(seconds: 15));
+
+  // ---- profiles ------------------------------------------------------------------------------
+
+  Future<pb.ProfileList> listProfiles() => _call((s, o) => s.listProfiles(pb.ListProfilesRequest(), options: o));
+
+  Future<pb.ProfileList> saveProfile(String name, {bool gpu = false, bool fan = false, bool rgb = false}) => _call(
+      (s, o) => s.saveProfile(
+          pb.SaveProfileRequest(name: name, includeGpu: gpu, includeFan: fan, includeRgb: rgb), options: o),
+      timeout: const Duration(seconds: 15));
+
+  Future<pb.ProfileList> deleteProfile(String name) =>
+      _call((s, o) => s.deleteProfile(pb.DeleteProfileRequest(name: name), options: o));
+
+  /// Applies each part (GPU, fan, lighting) and reports per part.
+  Future<pb.ApplyProfileReply> applyProfile(String name) => _call(
+      (s, o) => s.applyProfile(pb.ApplyProfileRequest(name: name), options: o),
+      timeout: const Duration(seconds: 40));
+
+  // ---- minecraft -----------------------------------------------------------------------------
+
+  Future<pb.MinecraftStatus> getMinecraft() =>
+      _call((s, o) => s.getMinecraft(pb.GetMinecraftRequest(), options: o), timeout: const Duration(seconds: 12));
+
+  Future<pb.MinecraftStatus> minecraftAction(pb.MinecraftActionRequest_Action action, {int warnSeconds = 0}) => _call(
+      (s, o) => s.minecraftAction(
+          pb.MinecraftActionRequest(action: action, confirm: true, warnSeconds: warnSeconds), options: o),
+      timeout: const Duration(seconds: 20));
+
+  // ---- alerts --------------------------------------------------------------------------------
+
+  Future<pb.AlertStatus> getAlerts() => _call((s, o) => s.getAlerts(pb.GetAlertsRequest(), options: o));
+
+  Future<pb.AlertStatus> sendTestAlert() =>
+      _call((s, o) => s.sendTestAlert(pb.SendTestAlertRequest(), options: o), timeout: const Duration(seconds: 15));
+
+  // ---- power + info ----------------------------------------------------------------------------
+
+  /// Reboot / shut down / suspend. dysd checks with logind first (errors come back here), answers,
+  /// then acts after the returned delay.
+  Future<Duration> power(pb.PowerRequest_Action action) async {
+    final r = await _call((s, o) => s.power(pb.PowerRequest(action: action, confirm: true), options: o),
+        timeout: const Duration(seconds: 15));
+    return Duration(milliseconds: r.delayMs);
+  }
+
+  /// OS, kernel, shell, desktop, CPU, GPU, RAM, disks, network (cached 60 s by dysd).
+  Future<pb.SystemInfo> getInfo({bool refresh = false}) =>
+      _call((s, o) => s.getInfo(pb.GetInfoRequest(refresh: refresh), options: o), timeout: const Duration(seconds: 20));
+
   Future<void> _reset() async {
     final ch = _channel;
     _channel = null;

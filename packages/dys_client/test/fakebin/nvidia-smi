@@ -3,6 +3,10 @@
 lim=$(cat "$FAKE_STATE/gpu_limit" 2>/dev/null || echo 285)
 for a in "$@"; do
   case $a in
+    --query-gpu=*utilization.gpu*) # dysd's stats query
+      printf 'NVIDIA GeForce RTX 4070 Ti SUPER, 12, 1024, 16376, 47, 35.10, %s.00, 2520, [N/A]\n' "$lim"; exit 0 ;;
+    --query-gpu=*vbios_version*) # dysd's info query
+      echo 'NVIDIA GeForce RTX 4070 Ti SUPER, 615.71.09, 16376, 95.03.4C.00.0A, 4, 16'; exit 0 ;;
     --query-gpu=*) printf 'NVIDIA GeForce RTX 4070 Ti SUPER, 615.71.09, %s.00, 100.00, 285.00, 320.00, 31.25\n' "$lim"; exit 0 ;;
     --power-limit=*) w=${a#--power-limit=}
       if (( w < 100 || w > 320 )); then echo "Provided power limit $w.00 W is not a valid power limit" >&2; exit 2; fi

@@ -1,0 +1,13 @@
+#!/bin/bash
+# Fake busctl for dysd's logind calls. NEVER let the real one run in tests: it would really
+# reboot/power off/suspend the machine running them.
+#   busctl --system --json=short call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager METHOD [b false]
+# Can* answers with $FAKE_STATE/can (default "yes"); acting appends the method to $FAKE_STATE/power.
+method=${7:-}
+echo "busctl $*" >> "$FAKE_STATE/calls"
+case $method in
+  Can*) printf '{"type":"s","data":["%s"]}\n' "$(cat "$FAKE_STATE/can" 2>/dev/null || echo yes)" ;;
+  ListInhibitors) echo '{"type":"a(ssssuu)","data":[[["shutdown:sleep","Steam","Game running","block",1000,42]]]}' ;;
+  Reboot|PowerOff|Suspend) echo "$method" >> "$FAKE_STATE/power"; echo '{"type":"","data":[]}' ;;
+  *) echo "fake busctl: unsupported $*" >&2; exit 9 ;;
+esac

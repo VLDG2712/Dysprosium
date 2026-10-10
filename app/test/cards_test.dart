@@ -27,6 +27,33 @@ class FakeClient extends DysClient {
 
   @override
   Future<bool> isOnLan() async => !away;
+
+  Object? powerError;
+  @override
+  Future<Duration> power(PowerRequest_Action action) async {
+    calls.add('power ${action.name}');
+    if (powerError != null) throw powerError!;
+    return const Duration(milliseconds: 1500);
+  }
+
+  @override
+  Future<void> rebootToWindows() async {
+    calls.add('windows');
+  }
+
+  int infoCalls = 0;
+  @override
+  Future<SystemInfo> getInfo({bool refresh = false}) async {
+    infoCalls++;
+    calls.add('info $refresh');
+    return SystemInfo(sections: [
+      InfoSection(title: 'System', icon: 'system', items: [
+        InfoItem(label: 'OS', value: 'Arch Linux'),
+        InfoItem(label: 'Shell', value: 'fish 4.1.2'),
+      ]),
+      InfoSection(title: 'CPU', icon: 'cpu', items: [InfoItem(label: 'Model', value: 'Intel(R) Core(TM) i7-14700KF')]),
+    ]);
+  }
   @override
   Future<GpuInfo> getGpu() async => gpu;
   @override

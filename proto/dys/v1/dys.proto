@@ -29,8 +29,44 @@ service System {
   rpc SetRgbMode(SetRgbModeRequest) returns (RgbDevice);
   // Software effect computed by dysd and pushed to the LEDs ~20x/s (for devices whose own effect
   // modes don't work). Any SetRgbColor/SetRgbMode on the device stops it; effect "none" stops it
-  // and leaves the last frame. Effects do not survive a dysd restart.
+  // and leaves the last frame. Colour, mode and effect changes are saved per device by dysd and
+  // reapplied after boot, a dysd restart or an OpenRGB restart ("none" forgets the device).
   rpc SetRgbEffect(SetRgbEffectRequest) returns (RgbDevice);
+
+  // Live system stats. Read-only, no privileges. WatchStats sends one sample per second while the
+  // stream is open (all watchers share one sampler); GetStats returns one sample.
+  rpc GetStats(GetStatsRequest) returns (Stats);
+  rpc WatchStats(WatchStatsRequest) returns (stream Stats);
+
+  // Pump/fan through nzxt-ctl's socket. Reading needs nothing; SetFanMode needs nzxt-ctl with the
+  // SetMode request and `[cooling] allow_mode_changes = true` in /etc/dysd/dysd.toml.
+  rpc GetCooling(GetCoolingRequest) returns (Cooling);
+  rpc SetFanMode(SetFanModeRequest) returns (Cooling);
+
+  // Profiles: named snapshots of GPU limit + fan mode + lighting, applied in one call.
+  rpc ListProfiles(ListProfilesRequest) returns (ProfileList);
+  // Captures the current state of the selected parts under `name` (replaces a profile of that name).
+  rpc SaveProfile(SaveProfileRequest) returns (ProfileList);
+  rpc DeleteProfile(DeleteProfileRequest) returns (ProfileList);
+  rpc ApplyProfile(ApplyProfileRequest) returns (ApplyProfileReply);
+
+  // Minecraft server ([minecraft] in /etc/dysd/dysd.toml): systemd state + players over RCON.
+  rpc GetMinecraft(GetMinecraftRequest) returns (MinecraftStatus);
+  rpc MinecraftAction(MinecraftActionRequest) returns (MinecraftStatus);
+
+  // ntfy alerts ([alerts] in /etc/dysd/dysd.toml).
+  rpc GetAlerts(GetAlertsRequest) returns (AlertStatus);
+  rpc SendTestAlert(SendTestAlertRequest) returns (AlertStatus);
+
+  // Reboot, shut down or suspend through logind (polkit: 50-dysd.rules allows these login1
+  // actions for user dysd, never the -ignore-inhibit variants). dysd checks with logind first
+  // (CanReboot/CanPowerOff/CanSuspend), answers, then acts after `delay_ms` so the reply gets out.
+  rpc Power(PowerRequest) returns (PowerReply);
+
+  // Static facts about the PC (OS, kernel, shell, desktop, CPU, GPU, RAM, disks, network) as
+  // titled sections of label/value pairs, so the phone can show new items without an update.
+  // Cached for 60 s unless `refresh`.
+  rpc GetInfo(GetInfoRequest) returns (SystemInfo);
 }
 
 message PingRequest {}
@@ -198,6 +234,265 @@ message SetRgbModeRequest {
   optional uint32 brightness = 4;
   optional uint32 direction = 5;
   optional RgbColors colors = 6;
+}
+
+// ---- stats -------------------------------------------------------------------------------------
+
+message GetStatsRequest {}
+
+message WatchStatsRequest {}
+
+message Stats {
+  uint64 unix_ms = 1;
+  string hostname = 2;
+  double uptime_s = 3;
+  repeated double load_avg = 4; // 1, 5, 15 min
+  CpuStats cpu = 5;
+  MemStats mem = 6;
+  repeated MountStats mounts = 7;
+  repeated DiskStats disks = 8;
+  repeated NetStats nets = 9;
+  GpuStats gpu = 10; // unset if nvidia-smi failed
+  Cooling cooling = 11;
+  repeated ProcStats top_cpu = 12;
+  repeated ProcStats top_mem = 13;
+  repeated SensorStats sensors = 14;
+}
+
+message CpuStats {
+  string model = 1;
+  float usage_pct = 2;
+  repeated float core_pct = 3; // per logical CPU
+  float freq_mhz_avg = 4;
+  float freq_mhz_max = 5;
+  optional float temp_c = 6; // package temperature
+}
+
+message MemStats {
+  // bytes
+  uint64 total = 1;
+  uint64 used = 2; // total - available
+  uint64 available = 3;
+  uint64 swap_total = 4;
+  uint64 swap_used = 5;
+}
+
+// A mounted filesystem dysd can see (its sandbox hides /home: a separate /home partition is not
+// listed, but its disk still appears under `disks`).
+message MountStats {
+  string mount = 1;
+  string device = 2;
+  string fs = 3;
+  uint64 total = 4; // bytes
+  uint64 used = 5;
+}
+
+// A physical disk (nvme0n1, sda, ...).
+message DiskStats {
+  string name = 1;
+  double read_bps = 2; // bytes per second
+  double write_bps = 3;
+  optional float temp_c = 4;
+  uint64 size = 5; // bytes
+}
+
+message NetStats {
+  string name = 1;
+  bool up = 2;
+  double rx_bps = 3; // bytes per second
+  double tx_bps = 4;
+  uint64 rx_total = 5;
+  uint64 tx_total = 6;
+  int32 link_mbps = 7; // -1 = unknown (Wi-Fi, tun)
+}
+
+message GpuStats {
+  string name = 1;
+  float util_pct = 2;
+  uint64 mem_used = 3; // bytes
+  uint64 mem_total = 4;
+  float temp_c = 5;
+  float power_w = 6;
+  float power_limit_w = 7;
+  float clock_mhz = 8;
+  optional float fan_pct = 9;
+}
+
+message ProcStats {
+  uint32 pid = 1;
+  string name = 2;
+  float cpu_pct = 3; // share of the whole CPU (all cores = 100)
+  uint64 rss = 4; // bytes
+}
+
+message SensorStats {
+  string chip = 1; // hwmon name: coretemp, nvme, ...
+  string label = 2;
+  float temp_c = 3;
+}
+
+// ---- cooling (nzxt-ctl) -------------------------------------------------------------------------
+
+message GetCoolingRequest {}
+
+message SetFanModeRequest {
+  // "performance", "silent" or "auto"
+  string mode = 1;
+}
+
+message Cooling {
+  // nzxt-ctl answered. If false, `error` says why and the rest is empty.
+  bool available = 1;
+  string error = 2;
+  optional float liquid_c = 3;
+  optional float cpu_c = 4;
+  optional float gpu_c = 5;
+  optional uint32 pump_rpm = 6;
+  optional uint32 fan_rpm = 7;
+  optional uint32 pump_duty_pct = 8;
+  optional uint32 fan_duty_pct = 9;
+  string mode = 10; // "performance" / "silent" / "auto" ("" if unknown)
+  bool failsafe_active = 11;
+  // `[cooling] allow_mode_changes` in dysd.toml.
+  bool mode_changes_allowed = 12;
+  repeated string modes = 13;
+}
+
+// ---- profiles -----------------------------------------------------------------------------------
+
+message ListProfilesRequest {}
+
+message Profile {
+  string name = 1;
+  optional uint32 gpu_watts = 2; // 0 = driver default
+  optional string fan_mode = 3;
+  uint32 rgb_devices = 4; // lighting saved for this many devices (0 = lighting not part of it)
+  uint64 saved_unix = 5;
+}
+
+message ProfileList {
+  repeated Profile profiles = 1;
+}
+
+message SaveProfileRequest {
+  string name = 1; // 1..32 chars: letters, digits, space, -_.
+  bool include_gpu = 2;
+  bool include_fan = 3;
+  bool include_rgb = 4;
+}
+
+message DeleteProfileRequest {
+  string name = 1;
+}
+
+message ApplyProfileRequest {
+  string name = 1;
+}
+
+message ApplyProfileReply {
+  message Part {
+    string part = 1; // "gpu", "fan", "rgb"
+    bool ok = 2;
+    string message = 3;
+  }
+  repeated Part parts = 1;
+}
+
+// ---- minecraft ----------------------------------------------------------------------------------
+
+message GetMinecraftRequest {}
+
+message MinecraftActionRequest {
+  enum Action {
+    START = 0;
+    STOP = 1;
+    RESTART = 2;
+  }
+  Action action = 1;
+  bool confirm = 2; // required for STOP and RESTART
+  // STOP/RESTART: announce in chat and wait this long first (0..300 s). The call returns at once.
+  uint32 warn_seconds = 3;
+}
+
+message MinecraftStatus {
+  bool configured = 1;
+  string unit = 2;
+  string active_state = 3; // systemd: active, inactive, failed, activating, deactivating
+  string sub_state = 4;
+  uint64 since_unix = 5; // when it entered the current state (0 = unknown)
+  uint64 memory_bytes = 6;
+  bool rcon_ok = 7;
+  string rcon_error = 8;
+  uint32 players_online = 9;
+  uint32 players_max = 10;
+  repeated string players = 11;
+  optional float tps = 12; // NeoForge `neoforge tps`, if it answers
+  string pending = 13; // e.g. "restart in 30 s" while a warned stop/restart is pending
+}
+
+// ---- alerts -------------------------------------------------------------------------------------
+
+message GetAlertsRequest {}
+
+message SendTestAlertRequest {}
+
+message AlertStatus {
+  bool configured = 1;
+  string server = 2; // ntfy URL (no token)
+  string topic = 3;
+  float cpu_temp_c = 4;
+  float gpu_temp_c = 5;
+  float liquid_temp_c = 6;
+  bool updates_finished = 7;
+  bool minecraft_crashed = 8;
+  uint32 cooldown_min = 9;
+  // Most recent alerts sent since dysd started, newest first (max 10).
+  repeated SentAlert recent = 10;
+}
+
+message SentAlert {
+  uint64 unix = 1;
+  string title = 2;
+  string message = 3;
+  bool ok = 4;
+  string error = 5;
+}
+
+message PowerRequest {
+  enum Action {
+    ACTION_UNSPECIFIED = 0; // rejected
+    REBOOT = 1;
+    SHUTDOWN = 2;
+    SLEEP = 3; // suspend to RAM
+  }
+  Action action = 1;
+  bool confirm = 2; // must be true
+}
+
+message PowerReply {
+  // dysd starts the action this long after replying.
+  uint32 delay_ms = 1;
+}
+
+message GetInfoRequest {
+  bool refresh = 1;
+}
+
+message SystemInfo {
+  repeated InfoSection sections = 1;
+  uint64 collected_unix = 2;
+}
+
+message InfoSection {
+  string title = 1;
+  // Icon hint for the phone: system, cpu, gpu, memory, storage, network.
+  string icon = 2;
+  repeated InfoItem items = 3;
+}
+
+message InfoItem {
+  string label = 1;
+  string value = 2;
 }
 
 // Served ONLY on the short-lived pairing listener (server-auth TLS, no client cert), which exists

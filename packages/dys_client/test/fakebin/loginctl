@@ -1,0 +1,7 @@
+#!/bin/bash
+# Fake loginctl: one KDE Wayland session for user "tester".
+case $1 in
+  list-sessions) echo '  2 1000 tester seat0 1234 user tty1 no -' ;;
+  show-session) printf 'Name=tester\nDesktop=KDE\nType=wayland\nClass=user\nActive=yes\n' ;;
+  *) echo "fake loginctl: unsupported $*" >&2; exit 9 ;;
+esac

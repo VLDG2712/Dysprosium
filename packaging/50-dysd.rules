@@ -1,11 +1,21 @@
 // /usr/share/polkit-1/rules.d/50-dysd.rules
-// Lets the dysd system user START exactly these units, nothing else (no stop/enable/edit,
-// no other units). Everyone else falls through to the normal policy (admin auth).
+// Lets the dysd system user START exactly these units, start/stop/restart the Minecraft server
+// unit, and reboot / power off / suspend through logind; nothing else (no enable/edit, no other
+// units, never the -ignore-inhibit variants). Everyone else falls through to the normal policy.
+
+// Must match `[minecraft] unit` in /etc/dysd/dysd.toml.
+var DYSD_MINECRAFT_UNIT = "atm10.service";
+
 polkit.addRule(function (action, subject) {
     if (action.id !== "org.freedesktop.systemd1.manage-units" || subject.user !== "dysd") {
         return polkit.Result.NOT_HANDLED;
     }
-    if (action.lookup("verb") !== "start") {
+    var verb = action.lookup("verb");
+    if (action.lookup("unit") === DYSD_MINECRAFT_UNIT &&
+        (verb === "start" || verb === "stop" || verb === "restart")) {
+        return polkit.Result.YES;
+    }
+    if (verb !== "start") {
         return polkit.Result.NOT_HANDLED;
     }
     var unit = action.lookup("unit");
@@ -19,6 +29,25 @@ polkit.addRule(function (action, subject) {
         if (w >= 50 && w <= 600) {
             return polkit.Result.YES;
         }
+    }
+    return polkit.Result.NOT_HANDLED;
+});
+
+// Reboot / shutdown / sleep from the phone (dysd calls logind's Reboot/PowerOff/Suspend).
+// The -multiple-sessions variants apply while someone is logged in on the desktop, which is the
+// normal case. -ignore-inhibit is NOT granted: an app holding a block inhibitor wins.
+var DYSD_LOGIN1 = [
+    "org.freedesktop.login1.reboot",
+    "org.freedesktop.login1.reboot-multiple-sessions",
+    "org.freedesktop.login1.power-off",
+    "org.freedesktop.login1.power-off-multiple-sessions",
+    "org.freedesktop.login1.suspend",
+    "org.freedesktop.login1.suspend-multiple-sessions",
+];
+
+polkit.addRule(function (action, subject) {
+    if (subject.user === "dysd" && DYSD_LOGIN1.indexOf(action.id) >= 0) {
+        return polkit.Result.YES;
     }
     return polkit.Result.NOT_HANDLED;
 });

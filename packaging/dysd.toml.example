@@ -1,0 +1,34 @@
+# /etc/dysd/dysd.toml — optional settings for dysd. Install with:
+#   sudo install -Dm640 -o root -g dys packaging/dysd.toml.example /etc/dysd/dysd.toml
+# then edit, and `sudo systemctl restart dysd`. A missing file = defaults (features below off).
+# Root:dys 0640 because it holds the RCON password and the ntfy token.
+
+[cooling]
+# nzxt-ctl's socket (dysd joins the nzxt-ctl group via packaging/dysd.sysusers).
+# nzxt_socket = "/run/nzxt-ctl/daemon.sock"
+# Allow switching Performance/Silent/Auto from the phone. Leave false until nzxt-ctl's
+# liquid-temperature failsafe has been tested on this PC (see the test checklist).
+allow_mode_changes = false
+
+[minecraft]
+# systemd unit of the server. 50-dysd.rules allows dysd to start/stop/restart exactly this unit;
+# change it there too if you rename it.
+unit = "atm10.service"
+# RCON from server.properties (enable-rcon=true, rcon.port, rcon.password).
+rcon_addr = "127.0.0.1:25575"
+rcon_password = "change-me"
+
+[alerts]
+# ntfy server on cerium, plain HTTP over the LAN/tailnet (no port forwarding needed).
+ntfy_url = "http://192.168.2.54:2586"
+topic = "europium"
+# Access token from `sudo ntfy token add dysd` on cerium (empty if the server allows anonymous posts).
+token = ""
+# Thresholds (°C). The liquid alert fires below nzxt-ctl's own failsafe (60 °C by default).
+cpu_temp_c = 95.0
+gpu_temp_c = 83.0
+liquid_temp_c = 50.0
+updates_finished = true
+minecraft_crashed = true
+# Minimum minutes between two alerts of the same kind.
+cooldown_min = 15

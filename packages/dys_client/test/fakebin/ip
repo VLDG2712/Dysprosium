@@ -1,0 +1,3 @@
+#!/bin/bash
+# Fake `ip -j addr show`: one wired interface.
+echo '[{"ifname":"enp4s0","operstate":"UP","link_type":"ether","address":"9c:6b:00:2b:25:30","addr_info":[{"family":"inet","local":"192.168.2.56","prefixlen":24,"scope":"global"}]}]'

@@ -450,6 +450,799 @@ final $typed_data.Uint8List setRgbModeRequestDescriptor = $convert.base64Decode(
     'RpcmVjdGlvbogBARIuCgZjb2xvcnMYBiABKAsyES5keXMudjEuUmdiQ29sb3JzSANSBmNvbG9y'
     'c4gBAUIICgZfc3BlZWRCDQoLX2JyaWdodG5lc3NCDAoKX2RpcmVjdGlvbkIJCgdfY29sb3Jz');
 
+@$core.Deprecated('Use getStatsRequestDescriptor instead')
+const GetStatsRequest$json = {
+  '1': 'GetStatsRequest',
+};
+
+/// Descriptor for `GetStatsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getStatsRequestDescriptor =
+    $convert.base64Decode('Cg9HZXRTdGF0c1JlcXVlc3Q=');
+
+@$core.Deprecated('Use watchStatsRequestDescriptor instead')
+const WatchStatsRequest$json = {
+  '1': 'WatchStatsRequest',
+};
+
+/// Descriptor for `WatchStatsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List watchStatsRequestDescriptor =
+    $convert.base64Decode('ChFXYXRjaFN0YXRzUmVxdWVzdA==');
+
+@$core.Deprecated('Use statsDescriptor instead')
+const Stats$json = {
+  '1': 'Stats',
+  '2': [
+    {'1': 'unix_ms', '3': 1, '4': 1, '5': 4, '10': 'unixMs'},
+    {'1': 'hostname', '3': 2, '4': 1, '5': 9, '10': 'hostname'},
+    {'1': 'uptime_s', '3': 3, '4': 1, '5': 1, '10': 'uptimeS'},
+    {'1': 'load_avg', '3': 4, '4': 3, '5': 1, '10': 'loadAvg'},
+    {'1': 'cpu', '3': 5, '4': 1, '5': 11, '6': '.dys.v1.CpuStats', '10': 'cpu'},
+    {'1': 'mem', '3': 6, '4': 1, '5': 11, '6': '.dys.v1.MemStats', '10': 'mem'},
+    {
+      '1': 'mounts',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.MountStats',
+      '10': 'mounts'
+    },
+    {
+      '1': 'disks',
+      '3': 8,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.DiskStats',
+      '10': 'disks'
+    },
+    {
+      '1': 'nets',
+      '3': 9,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.NetStats',
+      '10': 'nets'
+    },
+    {
+      '1': 'gpu',
+      '3': 10,
+      '4': 1,
+      '5': 11,
+      '6': '.dys.v1.GpuStats',
+      '10': 'gpu'
+    },
+    {
+      '1': 'cooling',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.dys.v1.Cooling',
+      '10': 'cooling'
+    },
+    {
+      '1': 'top_cpu',
+      '3': 12,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.ProcStats',
+      '10': 'topCpu'
+    },
+    {
+      '1': 'top_mem',
+      '3': 13,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.ProcStats',
+      '10': 'topMem'
+    },
+    {
+      '1': 'sensors',
+      '3': 14,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.SensorStats',
+      '10': 'sensors'
+    },
+  ],
+};
+
+/// Descriptor for `Stats`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List statsDescriptor = $convert.base64Decode(
+    'CgVTdGF0cxIXCgd1bml4X21zGAEgASgEUgZ1bml4TXMSGgoIaG9zdG5hbWUYAiABKAlSCGhvc3'
+    'RuYW1lEhkKCHVwdGltZV9zGAMgASgBUgd1cHRpbWVTEhkKCGxvYWRfYXZnGAQgAygBUgdsb2Fk'
+    'QXZnEiIKA2NwdRgFIAEoCzIQLmR5cy52MS5DcHVTdGF0c1IDY3B1EiIKA21lbRgGIAEoCzIQLm'
+    'R5cy52MS5NZW1TdGF0c1IDbWVtEioKBm1vdW50cxgHIAMoCzISLmR5cy52MS5Nb3VudFN0YXRz'
+    'UgZtb3VudHMSJwoFZGlza3MYCCADKAsyES5keXMudjEuRGlza1N0YXRzUgVkaXNrcxIkCgRuZX'
+    'RzGAkgAygLMhAuZHlzLnYxLk5ldFN0YXRzUgRuZXRzEiIKA2dwdRgKIAEoCzIQLmR5cy52MS5H'
+    'cHVTdGF0c1IDZ3B1EikKB2Nvb2xpbmcYCyABKAsyDy5keXMudjEuQ29vbGluZ1IHY29vbGluZx'
+    'IqCgd0b3BfY3B1GAwgAygLMhEuZHlzLnYxLlByb2NTdGF0c1IGdG9wQ3B1EioKB3RvcF9tZW0Y'
+    'DSADKAsyES5keXMudjEuUHJvY1N0YXRzUgZ0b3BNZW0SLQoHc2Vuc29ycxgOIAMoCzITLmR5cy'
+    '52MS5TZW5zb3JTdGF0c1IHc2Vuc29ycw==');
+
+@$core.Deprecated('Use cpuStatsDescriptor instead')
+const CpuStats$json = {
+  '1': 'CpuStats',
+  '2': [
+    {'1': 'model', '3': 1, '4': 1, '5': 9, '10': 'model'},
+    {'1': 'usage_pct', '3': 2, '4': 1, '5': 2, '10': 'usagePct'},
+    {'1': 'core_pct', '3': 3, '4': 3, '5': 2, '10': 'corePct'},
+    {'1': 'freq_mhz_avg', '3': 4, '4': 1, '5': 2, '10': 'freqMhzAvg'},
+    {'1': 'freq_mhz_max', '3': 5, '4': 1, '5': 2, '10': 'freqMhzMax'},
+    {'1': 'temp_c', '3': 6, '4': 1, '5': 2, '9': 0, '10': 'tempC', '17': true},
+  ],
+  '8': [
+    {'1': '_temp_c'},
+  ],
+};
+
+/// Descriptor for `CpuStats`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List cpuStatsDescriptor = $convert.base64Decode(
+    'CghDcHVTdGF0cxIUCgVtb2RlbBgBIAEoCVIFbW9kZWwSGwoJdXNhZ2VfcGN0GAIgASgCUgh1c2'
+    'FnZVBjdBIZCghjb3JlX3BjdBgDIAMoAlIHY29yZVBjdBIgCgxmcmVxX21oel9hdmcYBCABKAJS'
+    'CmZyZXFNaHpBdmcSIAoMZnJlcV9taHpfbWF4GAUgASgCUgpmcmVxTWh6TWF4EhoKBnRlbXBfYx'
+    'gGIAEoAkgAUgV0ZW1wQ4gBAUIJCgdfdGVtcF9j');
+
+@$core.Deprecated('Use memStatsDescriptor instead')
+const MemStats$json = {
+  '1': 'MemStats',
+  '2': [
+    {'1': 'total', '3': 1, '4': 1, '5': 4, '10': 'total'},
+    {'1': 'used', '3': 2, '4': 1, '5': 4, '10': 'used'},
+    {'1': 'available', '3': 3, '4': 1, '5': 4, '10': 'available'},
+    {'1': 'swap_total', '3': 4, '4': 1, '5': 4, '10': 'swapTotal'},
+    {'1': 'swap_used', '3': 5, '4': 1, '5': 4, '10': 'swapUsed'},
+  ],
+};
+
+/// Descriptor for `MemStats`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List memStatsDescriptor = $convert.base64Decode(
+    'CghNZW1TdGF0cxIUCgV0b3RhbBgBIAEoBFIFdG90YWwSEgoEdXNlZBgCIAEoBFIEdXNlZBIcCg'
+    'lhdmFpbGFibGUYAyABKARSCWF2YWlsYWJsZRIdCgpzd2FwX3RvdGFsGAQgASgEUglzd2FwVG90'
+    'YWwSGwoJc3dhcF91c2VkGAUgASgEUghzd2FwVXNlZA==');
+
+@$core.Deprecated('Use mountStatsDescriptor instead')
+const MountStats$json = {
+  '1': 'MountStats',
+  '2': [
+    {'1': 'mount', '3': 1, '4': 1, '5': 9, '10': 'mount'},
+    {'1': 'device', '3': 2, '4': 1, '5': 9, '10': 'device'},
+    {'1': 'fs', '3': 3, '4': 1, '5': 9, '10': 'fs'},
+    {'1': 'total', '3': 4, '4': 1, '5': 4, '10': 'total'},
+    {'1': 'used', '3': 5, '4': 1, '5': 4, '10': 'used'},
+  ],
+};
+
+/// Descriptor for `MountStats`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List mountStatsDescriptor = $convert.base64Decode(
+    'CgpNb3VudFN0YXRzEhQKBW1vdW50GAEgASgJUgVtb3VudBIWCgZkZXZpY2UYAiABKAlSBmRldm'
+    'ljZRIOCgJmcxgDIAEoCVICZnMSFAoFdG90YWwYBCABKARSBXRvdGFsEhIKBHVzZWQYBSABKARS'
+    'BHVzZWQ=');
+
+@$core.Deprecated('Use diskStatsDescriptor instead')
+const DiskStats$json = {
+  '1': 'DiskStats',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'read_bps', '3': 2, '4': 1, '5': 1, '10': 'readBps'},
+    {'1': 'write_bps', '3': 3, '4': 1, '5': 1, '10': 'writeBps'},
+    {'1': 'temp_c', '3': 4, '4': 1, '5': 2, '9': 0, '10': 'tempC', '17': true},
+    {'1': 'size', '3': 5, '4': 1, '5': 4, '10': 'size'},
+  ],
+  '8': [
+    {'1': '_temp_c'},
+  ],
+};
+
+/// Descriptor for `DiskStats`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List diskStatsDescriptor = $convert.base64Decode(
+    'CglEaXNrU3RhdHMSEgoEbmFtZRgBIAEoCVIEbmFtZRIZCghyZWFkX2JwcxgCIAEoAVIHcmVhZE'
+    'JwcxIbCgl3cml0ZV9icHMYAyABKAFSCHdyaXRlQnBzEhoKBnRlbXBfYxgEIAEoAkgAUgV0ZW1w'
+    'Q4gBARISCgRzaXplGAUgASgEUgRzaXplQgkKB190ZW1wX2M=');
+
+@$core.Deprecated('Use netStatsDescriptor instead')
+const NetStats$json = {
+  '1': 'NetStats',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'up', '3': 2, '4': 1, '5': 8, '10': 'up'},
+    {'1': 'rx_bps', '3': 3, '4': 1, '5': 1, '10': 'rxBps'},
+    {'1': 'tx_bps', '3': 4, '4': 1, '5': 1, '10': 'txBps'},
+    {'1': 'rx_total', '3': 5, '4': 1, '5': 4, '10': 'rxTotal'},
+    {'1': 'tx_total', '3': 6, '4': 1, '5': 4, '10': 'txTotal'},
+    {'1': 'link_mbps', '3': 7, '4': 1, '5': 5, '10': 'linkMbps'},
+  ],
+};
+
+/// Descriptor for `NetStats`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List netStatsDescriptor = $convert.base64Decode(
+    'CghOZXRTdGF0cxISCgRuYW1lGAEgASgJUgRuYW1lEg4KAnVwGAIgASgIUgJ1cBIVCgZyeF9icH'
+    'MYAyABKAFSBXJ4QnBzEhUKBnR4X2JwcxgEIAEoAVIFdHhCcHMSGQoIcnhfdG90YWwYBSABKARS'
+    'B3J4VG90YWwSGQoIdHhfdG90YWwYBiABKARSB3R4VG90YWwSGwoJbGlua19tYnBzGAcgASgFUg'
+    'hsaW5rTWJwcw==');
+
+@$core.Deprecated('Use gpuStatsDescriptor instead')
+const GpuStats$json = {
+  '1': 'GpuStats',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'util_pct', '3': 2, '4': 1, '5': 2, '10': 'utilPct'},
+    {'1': 'mem_used', '3': 3, '4': 1, '5': 4, '10': 'memUsed'},
+    {'1': 'mem_total', '3': 4, '4': 1, '5': 4, '10': 'memTotal'},
+    {'1': 'temp_c', '3': 5, '4': 1, '5': 2, '10': 'tempC'},
+    {'1': 'power_w', '3': 6, '4': 1, '5': 2, '10': 'powerW'},
+    {'1': 'power_limit_w', '3': 7, '4': 1, '5': 2, '10': 'powerLimitW'},
+    {'1': 'clock_mhz', '3': 8, '4': 1, '5': 2, '10': 'clockMhz'},
+    {
+      '1': 'fan_pct',
+      '3': 9,
+      '4': 1,
+      '5': 2,
+      '9': 0,
+      '10': 'fanPct',
+      '17': true
+    },
+  ],
+  '8': [
+    {'1': '_fan_pct'},
+  ],
+};
+
+/// Descriptor for `GpuStats`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gpuStatsDescriptor = $convert.base64Decode(
+    'CghHcHVTdGF0cxISCgRuYW1lGAEgASgJUgRuYW1lEhkKCHV0aWxfcGN0GAIgASgCUgd1dGlsUG'
+    'N0EhkKCG1lbV91c2VkGAMgASgEUgdtZW1Vc2VkEhsKCW1lbV90b3RhbBgEIAEoBFIIbWVtVG90'
+    'YWwSFQoGdGVtcF9jGAUgASgCUgV0ZW1wQxIXCgdwb3dlcl93GAYgASgCUgZwb3dlclcSIgoNcG'
+    '93ZXJfbGltaXRfdxgHIAEoAlILcG93ZXJMaW1pdFcSGwoJY2xvY2tfbWh6GAggASgCUghjbG9j'
+    'a01oehIcCgdmYW5fcGN0GAkgASgCSABSBmZhblBjdIgBAUIKCghfZmFuX3BjdA==');
+
+@$core.Deprecated('Use procStatsDescriptor instead')
+const ProcStats$json = {
+  '1': 'ProcStats',
+  '2': [
+    {'1': 'pid', '3': 1, '4': 1, '5': 13, '10': 'pid'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'cpu_pct', '3': 3, '4': 1, '5': 2, '10': 'cpuPct'},
+    {'1': 'rss', '3': 4, '4': 1, '5': 4, '10': 'rss'},
+  ],
+};
+
+/// Descriptor for `ProcStats`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List procStatsDescriptor = $convert.base64Decode(
+    'CglQcm9jU3RhdHMSEAoDcGlkGAEgASgNUgNwaWQSEgoEbmFtZRgCIAEoCVIEbmFtZRIXCgdjcH'
+    'VfcGN0GAMgASgCUgZjcHVQY3QSEAoDcnNzGAQgASgEUgNyc3M=');
+
+@$core.Deprecated('Use sensorStatsDescriptor instead')
+const SensorStats$json = {
+  '1': 'SensorStats',
+  '2': [
+    {'1': 'chip', '3': 1, '4': 1, '5': 9, '10': 'chip'},
+    {'1': 'label', '3': 2, '4': 1, '5': 9, '10': 'label'},
+    {'1': 'temp_c', '3': 3, '4': 1, '5': 2, '10': 'tempC'},
+  ],
+};
+
+/// Descriptor for `SensorStats`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List sensorStatsDescriptor = $convert.base64Decode(
+    'CgtTZW5zb3JTdGF0cxISCgRjaGlwGAEgASgJUgRjaGlwEhQKBWxhYmVsGAIgASgJUgVsYWJlbB'
+    'IVCgZ0ZW1wX2MYAyABKAJSBXRlbXBD');
+
+@$core.Deprecated('Use getCoolingRequestDescriptor instead')
+const GetCoolingRequest$json = {
+  '1': 'GetCoolingRequest',
+};
+
+/// Descriptor for `GetCoolingRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getCoolingRequestDescriptor =
+    $convert.base64Decode('ChFHZXRDb29saW5nUmVxdWVzdA==');
+
+@$core.Deprecated('Use setFanModeRequestDescriptor instead')
+const SetFanModeRequest$json = {
+  '1': 'SetFanModeRequest',
+  '2': [
+    {'1': 'mode', '3': 1, '4': 1, '5': 9, '10': 'mode'},
+  ],
+};
+
+/// Descriptor for `SetFanModeRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setFanModeRequestDescriptor = $convert
+    .base64Decode('ChFTZXRGYW5Nb2RlUmVxdWVzdBISCgRtb2RlGAEgASgJUgRtb2Rl');
+
+@$core.Deprecated('Use coolingDescriptor instead')
+const Cooling$json = {
+  '1': 'Cooling',
+  '2': [
+    {'1': 'available', '3': 1, '4': 1, '5': 8, '10': 'available'},
+    {'1': 'error', '3': 2, '4': 1, '5': 9, '10': 'error'},
+    {
+      '1': 'liquid_c',
+      '3': 3,
+      '4': 1,
+      '5': 2,
+      '9': 0,
+      '10': 'liquidC',
+      '17': true
+    },
+    {'1': 'cpu_c', '3': 4, '4': 1, '5': 2, '9': 1, '10': 'cpuC', '17': true},
+    {'1': 'gpu_c', '3': 5, '4': 1, '5': 2, '9': 2, '10': 'gpuC', '17': true},
+    {
+      '1': 'pump_rpm',
+      '3': 6,
+      '4': 1,
+      '5': 13,
+      '9': 3,
+      '10': 'pumpRpm',
+      '17': true
+    },
+    {
+      '1': 'fan_rpm',
+      '3': 7,
+      '4': 1,
+      '5': 13,
+      '9': 4,
+      '10': 'fanRpm',
+      '17': true
+    },
+    {
+      '1': 'pump_duty_pct',
+      '3': 8,
+      '4': 1,
+      '5': 13,
+      '9': 5,
+      '10': 'pumpDutyPct',
+      '17': true
+    },
+    {
+      '1': 'fan_duty_pct',
+      '3': 9,
+      '4': 1,
+      '5': 13,
+      '9': 6,
+      '10': 'fanDutyPct',
+      '17': true
+    },
+    {'1': 'mode', '3': 10, '4': 1, '5': 9, '10': 'mode'},
+    {'1': 'failsafe_active', '3': 11, '4': 1, '5': 8, '10': 'failsafeActive'},
+    {
+      '1': 'mode_changes_allowed',
+      '3': 12,
+      '4': 1,
+      '5': 8,
+      '10': 'modeChangesAllowed'
+    },
+    {'1': 'modes', '3': 13, '4': 3, '5': 9, '10': 'modes'},
+  ],
+  '8': [
+    {'1': '_liquid_c'},
+    {'1': '_cpu_c'},
+    {'1': '_gpu_c'},
+    {'1': '_pump_rpm'},
+    {'1': '_fan_rpm'},
+    {'1': '_pump_duty_pct'},
+    {'1': '_fan_duty_pct'},
+  ],
+};
+
+/// Descriptor for `Cooling`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List coolingDescriptor = $convert.base64Decode(
+    'CgdDb29saW5nEhwKCWF2YWlsYWJsZRgBIAEoCFIJYXZhaWxhYmxlEhQKBWVycm9yGAIgASgJUg'
+    'VlcnJvchIeCghsaXF1aWRfYxgDIAEoAkgAUgdsaXF1aWRDiAEBEhgKBWNwdV9jGAQgASgCSAFS'
+    'BGNwdUOIAQESGAoFZ3B1X2MYBSABKAJIAlIEZ3B1Q4gBARIeCghwdW1wX3JwbRgGIAEoDUgDUg'
+    'dwdW1wUnBtiAEBEhwKB2Zhbl9ycG0YByABKA1IBFIGZmFuUnBtiAEBEicKDXB1bXBfZHV0eV9w'
+    'Y3QYCCABKA1IBVILcHVtcER1dHlQY3SIAQESJQoMZmFuX2R1dHlfcGN0GAkgASgNSAZSCmZhbk'
+    'R1dHlQY3SIAQESEgoEbW9kZRgKIAEoCVIEbW9kZRInCg9mYWlsc2FmZV9hY3RpdmUYCyABKAhS'
+    'DmZhaWxzYWZlQWN0aXZlEjAKFG1vZGVfY2hhbmdlc19hbGxvd2VkGAwgASgIUhJtb2RlQ2hhbm'
+    'dlc0FsbG93ZWQSFAoFbW9kZXMYDSADKAlSBW1vZGVzQgsKCV9saXF1aWRfY0IICgZfY3B1X2NC'
+    'CAoGX2dwdV9jQgsKCV9wdW1wX3JwbUIKCghfZmFuX3JwbUIQCg5fcHVtcF9kdXR5X3BjdEIPCg'
+    '1fZmFuX2R1dHlfcGN0');
+
+@$core.Deprecated('Use listProfilesRequestDescriptor instead')
+const ListProfilesRequest$json = {
+  '1': 'ListProfilesRequest',
+};
+
+/// Descriptor for `ListProfilesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listProfilesRequestDescriptor =
+    $convert.base64Decode('ChNMaXN0UHJvZmlsZXNSZXF1ZXN0');
+
+@$core.Deprecated('Use profileDescriptor instead')
+const Profile$json = {
+  '1': 'Profile',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {
+      '1': 'gpu_watts',
+      '3': 2,
+      '4': 1,
+      '5': 13,
+      '9': 0,
+      '10': 'gpuWatts',
+      '17': true
+    },
+    {
+      '1': 'fan_mode',
+      '3': 3,
+      '4': 1,
+      '5': 9,
+      '9': 1,
+      '10': 'fanMode',
+      '17': true
+    },
+    {'1': 'rgb_devices', '3': 4, '4': 1, '5': 13, '10': 'rgbDevices'},
+    {'1': 'saved_unix', '3': 5, '4': 1, '5': 4, '10': 'savedUnix'},
+  ],
+  '8': [
+    {'1': '_gpu_watts'},
+    {'1': '_fan_mode'},
+  ],
+};
+
+/// Descriptor for `Profile`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List profileDescriptor = $convert.base64Decode(
+    'CgdQcm9maWxlEhIKBG5hbWUYASABKAlSBG5hbWUSIAoJZ3B1X3dhdHRzGAIgASgNSABSCGdwdV'
+    'dhdHRziAEBEh4KCGZhbl9tb2RlGAMgASgJSAFSB2Zhbk1vZGWIAQESHwoLcmdiX2RldmljZXMY'
+    'BCABKA1SCnJnYkRldmljZXMSHQoKc2F2ZWRfdW5peBgFIAEoBFIJc2F2ZWRVbml4QgwKCl9ncH'
+    'Vfd2F0dHNCCwoJX2Zhbl9tb2Rl');
+
+@$core.Deprecated('Use profileListDescriptor instead')
+const ProfileList$json = {
+  '1': 'ProfileList',
+  '2': [
+    {
+      '1': 'profiles',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.Profile',
+      '10': 'profiles'
+    },
+  ],
+};
+
+/// Descriptor for `ProfileList`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List profileListDescriptor = $convert.base64Decode(
+    'CgtQcm9maWxlTGlzdBIrCghwcm9maWxlcxgBIAMoCzIPLmR5cy52MS5Qcm9maWxlUghwcm9maW'
+    'xlcw==');
+
+@$core.Deprecated('Use saveProfileRequestDescriptor instead')
+const SaveProfileRequest$json = {
+  '1': 'SaveProfileRequest',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'include_gpu', '3': 2, '4': 1, '5': 8, '10': 'includeGpu'},
+    {'1': 'include_fan', '3': 3, '4': 1, '5': 8, '10': 'includeFan'},
+    {'1': 'include_rgb', '3': 4, '4': 1, '5': 8, '10': 'includeRgb'},
+  ],
+};
+
+/// Descriptor for `SaveProfileRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List saveProfileRequestDescriptor = $convert.base64Decode(
+    'ChJTYXZlUHJvZmlsZVJlcXVlc3QSEgoEbmFtZRgBIAEoCVIEbmFtZRIfCgtpbmNsdWRlX2dwdR'
+    'gCIAEoCFIKaW5jbHVkZUdwdRIfCgtpbmNsdWRlX2ZhbhgDIAEoCFIKaW5jbHVkZUZhbhIfCgtp'
+    'bmNsdWRlX3JnYhgEIAEoCFIKaW5jbHVkZVJnYg==');
+
+@$core.Deprecated('Use deleteProfileRequestDescriptor instead')
+const DeleteProfileRequest$json = {
+  '1': 'DeleteProfileRequest',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+  ],
+};
+
+/// Descriptor for `DeleteProfileRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deleteProfileRequestDescriptor = $convert
+    .base64Decode('ChREZWxldGVQcm9maWxlUmVxdWVzdBISCgRuYW1lGAEgASgJUgRuYW1l');
+
+@$core.Deprecated('Use applyProfileRequestDescriptor instead')
+const ApplyProfileRequest$json = {
+  '1': 'ApplyProfileRequest',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+  ],
+};
+
+/// Descriptor for `ApplyProfileRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List applyProfileRequestDescriptor = $convert
+    .base64Decode('ChNBcHBseVByb2ZpbGVSZXF1ZXN0EhIKBG5hbWUYASABKAlSBG5hbWU=');
+
+@$core.Deprecated('Use applyProfileReplyDescriptor instead')
+const ApplyProfileReply$json = {
+  '1': 'ApplyProfileReply',
+  '2': [
+    {
+      '1': 'parts',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.ApplyProfileReply.Part',
+      '10': 'parts'
+    },
+  ],
+  '3': [ApplyProfileReply_Part$json],
+};
+
+@$core.Deprecated('Use applyProfileReplyDescriptor instead')
+const ApplyProfileReply_Part$json = {
+  '1': 'Part',
+  '2': [
+    {'1': 'part', '3': 1, '4': 1, '5': 9, '10': 'part'},
+    {'1': 'ok', '3': 2, '4': 1, '5': 8, '10': 'ok'},
+    {'1': 'message', '3': 3, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `ApplyProfileReply`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List applyProfileReplyDescriptor = $convert.base64Decode(
+    'ChFBcHBseVByb2ZpbGVSZXBseRI0CgVwYXJ0cxgBIAMoCzIeLmR5cy52MS5BcHBseVByb2ZpbG'
+    'VSZXBseS5QYXJ0UgVwYXJ0cxpECgRQYXJ0EhIKBHBhcnQYASABKAlSBHBhcnQSDgoCb2sYAiAB'
+    'KAhSAm9rEhgKB21lc3NhZ2UYAyABKAlSB21lc3NhZ2U=');
+
+@$core.Deprecated('Use getMinecraftRequestDescriptor instead')
+const GetMinecraftRequest$json = {
+  '1': 'GetMinecraftRequest',
+};
+
+/// Descriptor for `GetMinecraftRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getMinecraftRequestDescriptor =
+    $convert.base64Decode('ChNHZXRNaW5lY3JhZnRSZXF1ZXN0');
+
+@$core.Deprecated('Use minecraftActionRequestDescriptor instead')
+const MinecraftActionRequest$json = {
+  '1': 'MinecraftActionRequest',
+  '2': [
+    {
+      '1': 'action',
+      '3': 1,
+      '4': 1,
+      '5': 14,
+      '6': '.dys.v1.MinecraftActionRequest.Action',
+      '10': 'action'
+    },
+    {'1': 'confirm', '3': 2, '4': 1, '5': 8, '10': 'confirm'},
+    {'1': 'warn_seconds', '3': 3, '4': 1, '5': 13, '10': 'warnSeconds'},
+  ],
+  '4': [MinecraftActionRequest_Action$json],
+};
+
+@$core.Deprecated('Use minecraftActionRequestDescriptor instead')
+const MinecraftActionRequest_Action$json = {
+  '1': 'Action',
+  '2': [
+    {'1': 'START', '2': 0},
+    {'1': 'STOP', '2': 1},
+    {'1': 'RESTART', '2': 2},
+  ],
+};
+
+/// Descriptor for `MinecraftActionRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List minecraftActionRequestDescriptor = $convert.base64Decode(
+    'ChZNaW5lY3JhZnRBY3Rpb25SZXF1ZXN0Ej0KBmFjdGlvbhgBIAEoDjIlLmR5cy52MS5NaW5lY3'
+    'JhZnRBY3Rpb25SZXF1ZXN0LkFjdGlvblIGYWN0aW9uEhgKB2NvbmZpcm0YAiABKAhSB2NvbmZp'
+    'cm0SIQoMd2Fybl9zZWNvbmRzGAMgASgNUgt3YXJuU2Vjb25kcyIqCgZBY3Rpb24SCQoFU1RBUl'
+    'QQABIICgRTVE9QEAESCwoHUkVTVEFSVBAC');
+
+@$core.Deprecated('Use minecraftStatusDescriptor instead')
+const MinecraftStatus$json = {
+  '1': 'MinecraftStatus',
+  '2': [
+    {'1': 'configured', '3': 1, '4': 1, '5': 8, '10': 'configured'},
+    {'1': 'unit', '3': 2, '4': 1, '5': 9, '10': 'unit'},
+    {'1': 'active_state', '3': 3, '4': 1, '5': 9, '10': 'activeState'},
+    {'1': 'sub_state', '3': 4, '4': 1, '5': 9, '10': 'subState'},
+    {'1': 'since_unix', '3': 5, '4': 1, '5': 4, '10': 'sinceUnix'},
+    {'1': 'memory_bytes', '3': 6, '4': 1, '5': 4, '10': 'memoryBytes'},
+    {'1': 'rcon_ok', '3': 7, '4': 1, '5': 8, '10': 'rconOk'},
+    {'1': 'rcon_error', '3': 8, '4': 1, '5': 9, '10': 'rconError'},
+    {'1': 'players_online', '3': 9, '4': 1, '5': 13, '10': 'playersOnline'},
+    {'1': 'players_max', '3': 10, '4': 1, '5': 13, '10': 'playersMax'},
+    {'1': 'players', '3': 11, '4': 3, '5': 9, '10': 'players'},
+    {'1': 'tps', '3': 12, '4': 1, '5': 2, '9': 0, '10': 'tps', '17': true},
+    {'1': 'pending', '3': 13, '4': 1, '5': 9, '10': 'pending'},
+  ],
+  '8': [
+    {'1': '_tps'},
+  ],
+};
+
+/// Descriptor for `MinecraftStatus`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List minecraftStatusDescriptor = $convert.base64Decode(
+    'Cg9NaW5lY3JhZnRTdGF0dXMSHgoKY29uZmlndXJlZBgBIAEoCFIKY29uZmlndXJlZBISCgR1bm'
+    'l0GAIgASgJUgR1bml0EiEKDGFjdGl2ZV9zdGF0ZRgDIAEoCVILYWN0aXZlU3RhdGUSGwoJc3Vi'
+    'X3N0YXRlGAQgASgJUghzdWJTdGF0ZRIdCgpzaW5jZV91bml4GAUgASgEUglzaW5jZVVuaXgSIQ'
+    'oMbWVtb3J5X2J5dGVzGAYgASgEUgttZW1vcnlCeXRlcxIXCgdyY29uX29rGAcgASgIUgZyY29u'
+    'T2sSHQoKcmNvbl9lcnJvchgIIAEoCVIJcmNvbkVycm9yEiUKDnBsYXllcnNfb25saW5lGAkgAS'
+    'gNUg1wbGF5ZXJzT25saW5lEh8KC3BsYXllcnNfbWF4GAogASgNUgpwbGF5ZXJzTWF4EhgKB3Bs'
+    'YXllcnMYCyADKAlSB3BsYXllcnMSFQoDdHBzGAwgASgCSABSA3Rwc4gBARIYCgdwZW5kaW5nGA'
+    '0gASgJUgdwZW5kaW5nQgYKBF90cHM=');
+
+@$core.Deprecated('Use getAlertsRequestDescriptor instead')
+const GetAlertsRequest$json = {
+  '1': 'GetAlertsRequest',
+};
+
+/// Descriptor for `GetAlertsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getAlertsRequestDescriptor =
+    $convert.base64Decode('ChBHZXRBbGVydHNSZXF1ZXN0');
+
+@$core.Deprecated('Use sendTestAlertRequestDescriptor instead')
+const SendTestAlertRequest$json = {
+  '1': 'SendTestAlertRequest',
+};
+
+/// Descriptor for `SendTestAlertRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List sendTestAlertRequestDescriptor =
+    $convert.base64Decode('ChRTZW5kVGVzdEFsZXJ0UmVxdWVzdA==');
+
+@$core.Deprecated('Use alertStatusDescriptor instead')
+const AlertStatus$json = {
+  '1': 'AlertStatus',
+  '2': [
+    {'1': 'configured', '3': 1, '4': 1, '5': 8, '10': 'configured'},
+    {'1': 'server', '3': 2, '4': 1, '5': 9, '10': 'server'},
+    {'1': 'topic', '3': 3, '4': 1, '5': 9, '10': 'topic'},
+    {'1': 'cpu_temp_c', '3': 4, '4': 1, '5': 2, '10': 'cpuTempC'},
+    {'1': 'gpu_temp_c', '3': 5, '4': 1, '5': 2, '10': 'gpuTempC'},
+    {'1': 'liquid_temp_c', '3': 6, '4': 1, '5': 2, '10': 'liquidTempC'},
+    {'1': 'updates_finished', '3': 7, '4': 1, '5': 8, '10': 'updatesFinished'},
+    {
+      '1': 'minecraft_crashed',
+      '3': 8,
+      '4': 1,
+      '5': 8,
+      '10': 'minecraftCrashed'
+    },
+    {'1': 'cooldown_min', '3': 9, '4': 1, '5': 13, '10': 'cooldownMin'},
+    {
+      '1': 'recent',
+      '3': 10,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.SentAlert',
+      '10': 'recent'
+    },
+  ],
+};
+
+/// Descriptor for `AlertStatus`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List alertStatusDescriptor = $convert.base64Decode(
+    'CgtBbGVydFN0YXR1cxIeCgpjb25maWd1cmVkGAEgASgIUgpjb25maWd1cmVkEhYKBnNlcnZlch'
+    'gCIAEoCVIGc2VydmVyEhQKBXRvcGljGAMgASgJUgV0b3BpYxIcCgpjcHVfdGVtcF9jGAQgASgC'
+    'UghjcHVUZW1wQxIcCgpncHVfdGVtcF9jGAUgASgCUghncHVUZW1wQxIiCg1saXF1aWRfdGVtcF'
+    '9jGAYgASgCUgtsaXF1aWRUZW1wQxIpChB1cGRhdGVzX2ZpbmlzaGVkGAcgASgIUg91cGRhdGVz'
+    'RmluaXNoZWQSKwoRbWluZWNyYWZ0X2NyYXNoZWQYCCABKAhSEG1pbmVjcmFmdENyYXNoZWQSIQ'
+    'oMY29vbGRvd25fbWluGAkgASgNUgtjb29sZG93bk1pbhIpCgZyZWNlbnQYCiADKAsyES5keXMu'
+    'djEuU2VudEFsZXJ0UgZyZWNlbnQ=');
+
+@$core.Deprecated('Use sentAlertDescriptor instead')
+const SentAlert$json = {
+  '1': 'SentAlert',
+  '2': [
+    {'1': 'unix', '3': 1, '4': 1, '5': 4, '10': 'unix'},
+    {'1': 'title', '3': 2, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'message', '3': 3, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'ok', '3': 4, '4': 1, '5': 8, '10': 'ok'},
+    {'1': 'error', '3': 5, '4': 1, '5': 9, '10': 'error'},
+  ],
+};
+
+/// Descriptor for `SentAlert`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List sentAlertDescriptor = $convert.base64Decode(
+    'CglTZW50QWxlcnQSEgoEdW5peBgBIAEoBFIEdW5peBIUCgV0aXRsZRgCIAEoCVIFdGl0bGUSGA'
+    'oHbWVzc2FnZRgDIAEoCVIHbWVzc2FnZRIOCgJvaxgEIAEoCFICb2sSFAoFZXJyb3IYBSABKAlS'
+    'BWVycm9y');
+
+@$core.Deprecated('Use powerRequestDescriptor instead')
+const PowerRequest$json = {
+  '1': 'PowerRequest',
+  '2': [
+    {
+      '1': 'action',
+      '3': 1,
+      '4': 1,
+      '5': 14,
+      '6': '.dys.v1.PowerRequest.Action',
+      '10': 'action'
+    },
+    {'1': 'confirm', '3': 2, '4': 1, '5': 8, '10': 'confirm'},
+  ],
+  '4': [PowerRequest_Action$json],
+};
+
+@$core.Deprecated('Use powerRequestDescriptor instead')
+const PowerRequest_Action$json = {
+  '1': 'Action',
+  '2': [
+    {'1': 'ACTION_UNSPECIFIED', '2': 0},
+    {'1': 'REBOOT', '2': 1},
+    {'1': 'SHUTDOWN', '2': 2},
+    {'1': 'SLEEP', '2': 3},
+  ],
+};
+
+/// Descriptor for `PowerRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List powerRequestDescriptor = $convert.base64Decode(
+    'CgxQb3dlclJlcXVlc3QSMwoGYWN0aW9uGAEgASgOMhsuZHlzLnYxLlBvd2VyUmVxdWVzdC5BY3'
+    'Rpb25SBmFjdGlvbhIYCgdjb25maXJtGAIgASgIUgdjb25maXJtIkUKBkFjdGlvbhIWChJBQ1RJ'
+    'T05fVU5TUEVDSUZJRUQQABIKCgZSRUJPT1QQARIMCghTSFVURE9XThACEgkKBVNMRUVQEAM=');
+
+@$core.Deprecated('Use powerReplyDescriptor instead')
+const PowerReply$json = {
+  '1': 'PowerReply',
+  '2': [
+    {'1': 'delay_ms', '3': 1, '4': 1, '5': 13, '10': 'delayMs'},
+  ],
+};
+
+/// Descriptor for `PowerReply`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List powerReplyDescriptor = $convert
+    .base64Decode('CgpQb3dlclJlcGx5EhkKCGRlbGF5X21zGAEgASgNUgdkZWxheU1z');
+
+@$core.Deprecated('Use getInfoRequestDescriptor instead')
+const GetInfoRequest$json = {
+  '1': 'GetInfoRequest',
+  '2': [
+    {'1': 'refresh', '3': 1, '4': 1, '5': 8, '10': 'refresh'},
+  ],
+};
+
+/// Descriptor for `GetInfoRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getInfoRequestDescriptor = $convert
+    .base64Decode('Cg5HZXRJbmZvUmVxdWVzdBIYCgdyZWZyZXNoGAEgASgIUgdyZWZyZXNo');
+
+@$core.Deprecated('Use systemInfoDescriptor instead')
+const SystemInfo$json = {
+  '1': 'SystemInfo',
+  '2': [
+    {
+      '1': 'sections',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.InfoSection',
+      '10': 'sections'
+    },
+    {'1': 'collected_unix', '3': 2, '4': 1, '5': 4, '10': 'collectedUnix'},
+  ],
+};
+
+/// Descriptor for `SystemInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List systemInfoDescriptor = $convert.base64Decode(
+    'CgpTeXN0ZW1JbmZvEi8KCHNlY3Rpb25zGAEgAygLMhMuZHlzLnYxLkluZm9TZWN0aW9uUghzZW'
+    'N0aW9ucxIlCg5jb2xsZWN0ZWRfdW5peBgCIAEoBFINY29sbGVjdGVkVW5peA==');
+
+@$core.Deprecated('Use infoSectionDescriptor instead')
+const InfoSection$json = {
+  '1': 'InfoSection',
+  '2': [
+    {'1': 'title', '3': 1, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'icon', '3': 2, '4': 1, '5': 9, '10': 'icon'},
+    {
+      '1': 'items',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.InfoItem',
+      '10': 'items'
+    },
+  ],
+};
+
+/// Descriptor for `InfoSection`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List infoSectionDescriptor = $convert.base64Decode(
+    'CgtJbmZvU2VjdGlvbhIUCgV0aXRsZRgBIAEoCVIFdGl0bGUSEgoEaWNvbhgCIAEoCVIEaWNvbh'
+    'ImCgVpdGVtcxgDIAMoCzIQLmR5cy52MS5JbmZvSXRlbVIFaXRlbXM=');
+
+@$core.Deprecated('Use infoItemDescriptor instead')
+const InfoItem$json = {
+  '1': 'InfoItem',
+  '2': [
+    {'1': 'label', '3': 1, '4': 1, '5': 9, '10': 'label'},
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+  ],
+};
+
+/// Descriptor for `InfoItem`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List infoItemDescriptor = $convert.base64Decode(
+    'CghJbmZvSXRlbRIUCgVsYWJlbBgBIAEoCVIFbGFiZWwSFAoFdmFsdWUYAiABKAlSBXZhbHVl');
+
 @$core.Deprecated('Use pairRequestDescriptor instead')
 const PairRequest$json = {
   '1': 'PairRequest',

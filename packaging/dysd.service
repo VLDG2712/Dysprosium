@@ -21,8 +21,10 @@ UMask=0007
 
 # Hardening. dysd needs no privileges: cooling goes through nzxt-ctl's socket, RGB through
 # OpenRGB on 127.0.0.1, root actions by starting fixed units that polkit allows only for this
-# user (50-dysd.rules: dysd-gpu-limit@.service, dysd-reboot-windows.service, dysd-update.service).
-# Child processes (nvidia-smi, checkupdates/fakeroot/pacman, yay, systemctl) inherit all of this.
+# user (50-dysd.rules: dysd-gpu-limit@.service, dysd-reboot-windows.service, dysd-update.service),
+# and reboot/power-off/suspend through logind over D-Bus (same rules file, login1 actions).
+# Child processes (nvidia-smi, checkupdates/fakeroot/pacman, yay, systemctl, busctl, loginctl, ip)
+# inherit all of this.
 NoNewPrivileges=yes
 CapabilityBoundingSet=
 ProtectSystem=strict

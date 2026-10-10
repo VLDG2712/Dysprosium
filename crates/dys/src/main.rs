@@ -11,10 +11,15 @@ use dys_core::pb::pairing_event::Event;
 use dys_core::pb::system_client::SystemClient;
 use dys_core::pb::package_update::Source;
 use dys_core::pb::update_status::State;
+use dys_core::pb::minecraft_action_request::Action as McAction;
+use dys_core::pb::power_request::Action as PowerAction;
 use dys_core::pb::{
-    ApplyUpdatesRequest, CheckUpdatesRequest, GetGpuRequest, GetUpdateStatusRequest, GpuInfo, ListClientsRequest,
-    ListRgbDevicesRequest, PingRequest, RebootToWindowsRequest, RevokeClientRequest, RgbColors, RgbDevice,
-    SetGpuPowerLimitRequest, SetRgbColorRequest, SetRgbEffectRequest, SetRgbModeRequest, StartPairingRequest, UpdateStatus,
+    ApplyProfileRequest, ApplyUpdatesRequest, CheckUpdatesRequest, Cooling, DeleteProfileRequest, GetAlertsRequest,
+    GetCoolingRequest, GetGpuRequest, GetInfoRequest, GetMinecraftRequest, GetStatsRequest, GetUpdateStatusRequest, GpuInfo,
+    ListClientsRequest, ListProfilesRequest, ListRgbDevicesRequest, MinecraftActionRequest, MinecraftStatus,
+    PingRequest, PowerRequest, RebootToWindowsRequest, RevokeClientRequest, RgbColors, RgbDevice, SaveProfileRequest,
+    SendTestAlertRequest, SetFanModeRequest, SetGpuPowerLimitRequest, SetRgbColorRequest, SetRgbEffectRequest,
+    SetRgbModeRequest, StartPairingRequest, Stats, UpdateStatus,
 };
 use hyper_util::rt::TokioIo;
 use qrcode::QrCode;
@@ -60,12 +65,55 @@ enum Cmd {
         #[command(subcommand)]
         cmd: Option<RgbCmd>,
     },
+    /// One snapshot of CPU, memory, disks, network, GPU, cooling and top processes.
+    Stats,
+    /// Pump/fan state from nzxt-ctl, or switch its mode.
+    Cooling {
+        #[command(subcommand)]
+        cmd: Option<CoolingCmd>,
+    },
+    /// Profiles: GPU limit + fan mode + lighting in one go.
+    Profile {
+        #[command(subcommand)]
+        cmd: Option<ProfileCmd>,
+    },
+    /// Minecraft server status (players, TPS) or start/stop/restart.
+    Mc {
+        #[command(subcommand)]
+        cmd: Option<McCmd>,
+    },
+    /// ntfy alert settings, or send a test alert.
+    Alerts {
+        #[command(subcommand)]
+        cmd: Option<AlertsCmd>,
+    },
+    /// Reboot, shut down or suspend the PC (through logind).
+    Power {
+        #[arg(value_enum)]
+        action: PowerArg,
+        /// Don't ask for confirmation.
+        #[arg(long, short)]
+        yes: bool,
+    },
+    /// OS, kernel, shell, desktop, CPU, GPU, RAM, disks and network, fastfetch-style.
+    Info {
+        /// Collect again instead of using dysd's 60 s cache.
+        #[arg(long)]
+        refresh: bool,
+    },
     /// Boot Windows once (UEFI BootNext), then reboot now.
     RebootWindows {
         /// Don't ask for confirmation.
         #[arg(long, short)]
         yes: bool,
     },
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum PowerArg {
+    Reboot,
+    Shutdown,
+    Sleep,
 }
 
 #[derive(Subcommand)]
@@ -108,6 +156,53 @@ enum RgbCmd {
         #[arg(long = "color")]
         colors: Vec<String>,
     },
+}
+
+#[derive(Subcommand)]
+enum CoolingCmd {
+    /// performance | silent | auto (needs allow_mode_changes in /etc/dysd/dysd.toml)
+    Mode { mode: String },
+}
+
+#[derive(Subcommand)]
+enum ProfileCmd {
+    List,
+    /// Save the current state of the chosen parts under NAME (replaces an existing one).
+    Save {
+        name: String,
+        #[arg(long)]
+        gpu: bool,
+        #[arg(long)]
+        fan: bool,
+        #[arg(long)]
+        rgb: bool,
+    },
+    Apply { name: String },
+    Delete { name: String },
+}
+
+#[derive(Subcommand)]
+enum McCmd {
+    Start,
+    Stop {
+        /// Announce in chat and wait this many seconds first.
+        #[arg(long, default_value_t = 0)]
+        warn: u32,
+        #[arg(long, short)]
+        yes: bool,
+    },
+    Restart {
+        #[arg(long, default_value_t = 0)]
+        warn: u32,
+        #[arg(long, short)]
+        yes: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum AlertsCmd {
+    /// Send a test notification.
+    Test,
 }
 
 #[derive(Subcommand)]
@@ -296,6 +391,61 @@ async fn main() -> Result<()> {
             }
         }
         Cmd::Rgb { cmd } => rgb(ch, cmd).await?,
+        Cmd::Stats => print_stats(&rpc(SystemClient::new(ch).get_stats(GetStatsRequest {}).await)?),
+        Cmd::Cooling { cmd: None } => print_cooling(&rpc(SystemClient::new(ch).get_cooling(GetCoolingRequest {}).await)?),
+        Cmd::Cooling { cmd: Some(CoolingCmd::Mode { mode }) } => {
+            print_cooling(&rpc(SystemClient::new(ch).set_fan_mode(SetFanModeRequest { mode }).await)?);
+        }
+        Cmd::Profile { cmd } => profile(ch, cmd).await?,
+        Cmd::Mc { cmd } => minecraft(ch, cmd).await?,
+        Cmd::Alerts { cmd } => {
+            let mut c = SystemClient::new(ch);
+            let st = match cmd {
+                None => rpc(c.get_alerts(GetAlertsRequest {}).await)?,
+                Some(AlertsCmd::Test) => {
+                    let st = rpc(c.send_test_alert(SendTestAlertRequest {}).await)?;
+                    println!("test alert sent");
+                    st
+                }
+            };
+            if !st.configured {
+                println!("alerts not configured (add [alerts] to /etc/dysd/dysd.toml, then restart dysd)");
+            } else {
+                println!("ntfy {} topic {}", st.server, st.topic);
+                println!(
+                    "thresholds: CPU {} °C, GPU {} °C, liquid {} °C; updates {}, Minecraft crash {}; cooldown {} min",
+                    st.cpu_temp_c, st.gpu_temp_c, st.liquid_temp_c, st.updates_finished, st.minecraft_crashed, st.cooldown_min
+                );
+            }
+            for a in st.recent {
+                println!("  {} {}  {}{}", a.unix, if a.ok { "ok  " } else { "FAIL" }, a.title, if a.ok { String::new() } else { format!(" ({})", a.error) });
+            }
+        }
+        Cmd::Power { action, yes } => {
+            let (a, q, done) = match action {
+                PowerArg::Reboot => (PowerAction::Reboot, "Reboot now? Unsaved work is lost.", "rebooting"),
+                PowerArg::Shutdown => (PowerAction::Shutdown, "Shut down now? Unsaved work is lost.", "shutting down"),
+                PowerArg::Sleep => (PowerAction::Sleep, "Suspend now?", "suspending"),
+            };
+            if !yes && !confirm(q)? {
+                bail!("cancelled");
+            }
+            let r = rpc(SystemClient::new(ch).power(PowerRequest { action: a as i32, confirm: true }).await)?;
+            println!("{done} in {:.1} s…", f64::from(r.delay_ms) / 1000.0);
+        }
+        Cmd::Info { refresh } => {
+            let info = rpc(SystemClient::new(ch).get_info(GetInfoRequest { refresh }).await)?;
+            let width = info.sections.iter().flat_map(|s| &s.items).map(|i| i.label.chars().count()).max().unwrap_or(0);
+            for (n, sec) in info.sections.iter().enumerate() {
+                if n > 0 {
+                    println!();
+                }
+                println!("{}", sec.title);
+                for i in &sec.items {
+                    println!("  {:width$}  {}", i.label, i.value);
+                }
+            }
+        }
         Cmd::RebootWindows { yes } => {
             if !yes && !confirm("Reboot into Windows now? Unsaved work is lost.")? {
                 bail!("cancelled");
@@ -304,6 +454,147 @@ async fn main() -> Result<()> {
             println!("rebooting into Windows…");
         }
     }
+    Ok(())
+}
+
+fn human_bytes(b: f64) -> String {
+    let units = ["B", "KiB", "MiB", "GiB", "TiB"];
+    let mut v = b;
+    let mut i = 0;
+    while v >= 1024.0 && i < units.len() - 1 {
+        v /= 1024.0;
+        i += 1;
+    }
+    if i == 0 { format!("{v:.0} {}", units[i]) } else { format!("{v:.1} {}", units[i]) }
+}
+
+fn print_stats(s: &Stats) {
+    let up = s.uptime_s as u64;
+    println!("{}  up {}d {}h {}m  load {:?}", s.hostname, up / 86400, up / 3600 % 24, up / 60 % 60, s.load_avg);
+    if let Some(c) = &s.cpu {
+        let t = c.temp_c.map_or_else(String::new, |t| format!("  {t:.0} °C"));
+        println!("CPU  {:5.1} %  avg {:.0} / max {:.0} MHz{t}  ({}, {} threads)", c.usage_pct, c.freq_mhz_avg, c.freq_mhz_max, c.model, c.core_pct.len());
+    }
+    if let Some(m) = &s.mem {
+        println!("RAM  {} / {}  swap {} / {}", human_bytes(m.used as f64), human_bytes(m.total as f64), human_bytes(m.swap_used as f64), human_bytes(m.swap_total as f64));
+    }
+    if let Some(g) = &s.gpu {
+        let fan = g.fan_pct.map_or_else(String::new, |f| format!("  fan {f:.0} %"));
+        println!(
+            "GPU  {:5.1} %  {:.0} °C  {:.0}/{:.0} W  {:.0} MHz  VRAM {} / {}{fan}",
+            g.util_pct, g.temp_c, g.power_w, g.power_limit_w, g.clock_mhz, human_bytes(g.mem_used as f64), human_bytes(g.mem_total as f64)
+        );
+    }
+    for m in &s.mounts {
+        println!("disk {:<16} {:>10} / {:>10}  {} {}", m.mount, human_bytes(m.used as f64), human_bytes(m.total as f64), m.fs, m.device);
+    }
+    for d in &s.disks {
+        let t = d.temp_c.map_or_else(String::new, |t| format!("  {t:.0} °C"));
+        println!("io   {:<16} read {}/s  write {}/s{t}", d.name, human_bytes(d.read_bps), human_bytes(d.write_bps));
+    }
+    for n in &s.nets {
+        let link = if n.link_mbps > 0 { format!("  {} Mb/s", n.link_mbps) } else { String::new() };
+        println!("net  {:<16} down {}/s  up {}/s{link}{}", n.name, human_bytes(n.rx_bps), human_bytes(n.tx_bps), if n.up { "" } else { "  (down)" });
+    }
+    if let Some(c) = &s.cooling {
+        print_cooling(c);
+    }
+    println!("top CPU: {}", s.top_cpu.iter().take(5).map(|p| format!("{} {:.1}%", p.name, p.cpu_pct)).collect::<Vec<_>>().join(", "));
+    println!("top RAM: {}", s.top_mem.iter().take(5).map(|p| format!("{} {}", p.name, human_bytes(p.rss as f64))).collect::<Vec<_>>().join(", "));
+    println!("sensors: {}", s.sensors.iter().map(|x| format!("{}/{} {:.0}°C", x.chip, x.label, x.temp_c)).collect::<Vec<_>>().join(", "));
+}
+
+fn print_cooling(c: &Cooling) {
+    if !c.available {
+        println!("cooling: nzxt-ctl unavailable: {}", c.error);
+        return;
+    }
+    let f = |v: Option<f32>| v.map_or_else(|| "?".to_owned(), |v| format!("{v:.1}"));
+    let u = |v: Option<u32>| v.map_or_else(|| "?".to_owned(), |v| v.to_string());
+    println!(
+        "cooling: mode {}  liquid {} °C  pump {} rpm ({} %)  fan {} rpm ({} %){}{}",
+        if c.mode.is_empty() { "?" } else { &c.mode },
+        f(c.liquid_c),
+        u(c.pump_rpm),
+        u(c.pump_duty_pct),
+        u(c.fan_rpm),
+        u(c.fan_duty_pct),
+        if c.failsafe_active { "  FAILSAFE ACTIVE" } else { "" },
+        if c.mode_changes_allowed { "" } else { "  (mode changes disabled in dysd.toml)" }
+    );
+}
+
+async fn profile(ch: Channel, cmd: Option<ProfileCmd>) -> Result<()> {
+    let mut c = SystemClient::new(ch);
+    let list = match cmd {
+        None | Some(ProfileCmd::List) => rpc(c.list_profiles(ListProfilesRequest {}).await)?,
+        Some(ProfileCmd::Save { name, gpu, fan, rgb }) => {
+            rpc(c.save_profile(SaveProfileRequest { name, include_gpu: gpu, include_fan: fan, include_rgb: rgb }).await)?
+        }
+        Some(ProfileCmd::Delete { name }) => rpc(c.delete_profile(DeleteProfileRequest { name }).await)?,
+        Some(ProfileCmd::Apply { name }) => {
+            let r = rpc(c.apply_profile(ApplyProfileRequest { name }).await)?;
+            for p in &r.parts {
+                println!("{:<4} {}  {}", p.part, if p.ok { "ok  " } else { "FAIL" }, p.message);
+            }
+            if r.parts.iter().any(|p| !p.ok) {
+                bail!("some parts failed");
+            }
+            return Ok(());
+        }
+    };
+    if list.profiles.is_empty() {
+        println!("no profiles (dys profile save <name> --gpu --fan --rgb)");
+    }
+    for p in list.profiles {
+        let mut parts = Vec::new();
+        if let Some(w) = p.gpu_watts {
+            parts.push(if w == 0 { "GPU default".to_owned() } else { format!("GPU {w} W") });
+        }
+        if let Some(m) = p.fan_mode {
+            parts.push(format!("fan {m}"));
+        }
+        if p.rgb_devices > 0 {
+            parts.push(format!("lighting on {} device(s)", p.rgb_devices));
+        }
+        println!("{:<20} {}", p.name, parts.join(", "));
+    }
+    Ok(())
+}
+
+fn print_mc(s: &MinecraftStatus) {
+    if !s.configured {
+        println!("Minecraft not configured (add [minecraft] to /etc/dysd/dysd.toml, then restart dysd)");
+        return;
+    }
+    println!("{}: {} ({}) since {}  memory {}", s.unit, s.active_state, s.sub_state, s.since_unix, human_bytes(s.memory_bytes as f64));
+    if s.rcon_ok {
+        let tps = s.tps.map_or_else(String::new, |t| format!("  TPS {t:.1}"));
+        println!("players {}/{}: {}{tps}", s.players_online, s.players_max, s.players.join(", "));
+    } else if !s.rcon_error.is_empty() {
+        println!("RCON: {}", s.rcon_error);
+    }
+    if !s.pending.is_empty() {
+        println!("pending: {}", s.pending);
+    }
+}
+
+async fn minecraft(ch: Channel, cmd: Option<McCmd>) -> Result<()> {
+    let mut c = SystemClient::new(ch);
+    let (action, warn, yes) = match cmd {
+        None => {
+            print_mc(&rpc(c.get_minecraft(GetMinecraftRequest {}).await)?);
+            return Ok(());
+        }
+        Some(McCmd::Start) => (McAction::Start, 0, true),
+        Some(McCmd::Stop { warn, yes }) => (McAction::Stop, warn, yes),
+        Some(McCmd::Restart { warn, yes }) => (McAction::Restart, warn, yes),
+    };
+    if !yes && !confirm(&format!("{} the Minecraft server?", if action == McAction::Stop { "Stop" } else { "Restart" }))? {
+        bail!("cancelled");
+    }
+    let s = rpc(c.minecraft_action(MinecraftActionRequest { action: action as i32, confirm: true, warn_seconds: warn }).await)?;
+    print_mc(&s);
     Ok(())
 }
 

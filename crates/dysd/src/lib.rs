@@ -3,13 +3,19 @@
 //! The binary in `main.rs` is a thin CLI.
 
 pub mod actions;
+pub mod alerts;
+pub mod config;
+pub mod cooling;
 pub mod daemon;
 pub mod fx;
 pub mod local;
 pub mod pairing;
+pub mod rcon;
 pub mod rgb;
+pub mod rgb_store;
 pub mod server;
 pub mod state;
+pub mod stats;
 
 /// Install ring as the process-wide rustls provider. Call once at startup, before any TLS
 /// config is built; makes the choice explicit even if another dep pulls in aws-lc-rs.

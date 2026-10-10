@@ -46,8 +46,19 @@ class Dysd {
     if (init.exitCode != 0) throw StateError('dysd init: ${init.stderr}');
     final main = await _freePort(host), pairPort = await _freePort(host);
     // Fake nvidia-smi/systemctl/checkupdates/yay come first in PATH: nothing real is ever touched.
+    // A fake that isn't executable is skipped in PATH and the REAL tool runs instead; for busctl
+    // that would really reboot/shut down this machine. Refuse to start.
+    for (final f in Directory('test/fakebin').listSync().whereType<File>()) {
+      if (f.path.endsWith('.md')) continue;
+      if (f.statSync().mode & 0x49 == 0) {
+        throw StateError('${f.path} is not executable: chmod +x test/fakebin/* (else the real tool would run)');
+      }
+    }
     final fake = Directory('${dir.path}/fake')..createSync();
     final logs = Directory('${dir.path}/logs')..createSync();
+    // Only a [cooling] section pointing at a socket that can't exist: on europium the real
+    // nzxt-ctl socket is reachable. Minecraft and alerts stay unconfigured.
+    File('${dir.path}/dysd.toml').writeAsStringSync('[cooling]\nnzxt_socket = "${dir.path}/no-nzxt-ctl.sock"\n');
     final proc = await Process.start(
       '$bin/dysd',
       [
@@ -57,7 +68,11 @@ class Dysd {
       environment: {
         'PATH': '${Directory('test/fakebin').absolute.path}:${Platform.environment['PATH']}',
         'FAKE_STATE': fake.path,
+        // Never pick up the real /etc/dysd/dysd.toml (alerts, Minecraft, cooling) when run on the PC.
+        'DYSD_CONFIG': '${dir.path}/dysd.toml',
         'DYSD_LOG_DIR': logs.path,
+        // Port 1 refuses: never talk to the real OpenRGB server on the PC.
+        'DYSD_OPENRGB_ADDR': '127.0.0.1:1',
       },
     );
     final d = Dysd._(bin, dir, proc, main);
@@ -248,6 +263,47 @@ void main() {
       expect([reset.limitW, reset.savedW], [285, 0]);
     });
 
+    test('stats: one sample, and a live stream over mTLS', () async {
+      final st = await c.getStats();
+      expect(st.cpu.corePct, isNotEmpty);
+      expect(st.mem.total.toInt(), greaterThan(0));
+      expect(st.gpu.name, contains('4070'));
+      expect(st.gpu.fanPct, 0, reason: '[N/A] fan is unset');
+      expect(st.hasCooling() && !st.cooling.available, isTrue, reason: 'no nzxt-ctl here');
+
+      final samples = await c.watchStats().take(2).toList().timeout(const Duration(seconds: 6));
+      expect(samples, hasLength(2));
+      expect(samples[1].unixMs > samples[0].unixMs, isTrue);
+    });
+
+    test('cooling without nzxt-ctl, fan modes disabled by default', () async {
+      final co = await c.getCooling();
+      expect(co.available, isFalse);
+      expect(co.error, contains('nzxt-ctl'));
+      expect(co.modes, ['performance', 'silent', 'auto']);
+      await expectLater(c.setFanMode('auto'), throwsA(_kind(DysErrorKind.failed)));
+    });
+
+    test('profiles: save GPU, apply, delete', () async {
+      await c.setGpuPowerLimit(250);
+      final l = await c.saveProfile('Quiet', gpu: true);
+      expect(l.profiles.single.gpuWatts, 250);
+      await c.setGpuPowerLimit(0);
+      final r = await c.applyProfile('quiet');
+      expect(r.parts.single.ok, isTrue, reason: r.parts.single.message);
+      expect((await c.getGpu()).limitW, 250);
+      await expectLater(c.saveProfile('bad/name', gpu: true), throwsA(_kind(DysErrorKind.invalidInput)));
+      expect((await c.deleteProfile('Quiet')).profiles, isEmpty);
+    });
+
+    test('Minecraft and alerts report "not configured" without their dysd.toml sections', () async {
+      expect((await c.getMinecraft()).configured, isFalse);
+      await expectLater(
+          c.minecraftAction(MinecraftActionRequest_Action.START), throwsA(_kind(DysErrorKind.failed)));
+      expect((await c.getAlerts()).configured, isFalse);
+      await expectLater(c.sendTestAlert(), throwsA(_kind(DysErrorKind.failed)));
+    });
+
     test('polkit denial surfaces as forbidden with a hint', () async {
       d.fake('deny').writeAsStringSync('');
       await expectLater(
@@ -255,6 +311,49 @@ void main() {
           throwsA(isA<DysException>()
               .having((e) => e.kind, 'kind', DysErrorKind.forbidden)
               .having((e) => e.message, 'message', contains('50-dysd.rules'))));
+    });
+
+    test('power: logind is asked first, then the action runs after the delay (fake busctl only)', () async {
+      final delay = await c.power(PowerRequest_Action.SLEEP);
+      expect(delay.inMilliseconds, greaterThan(0));
+      final power = d.fake('power');
+      expect(power.existsSync(), isFalse, reason: 'replies before acting');
+      await Future<void>.delayed(delay + const Duration(milliseconds: 700));
+      expect(power.readAsStringSync().trim(), 'Suspend');
+
+      d.fake('can').writeAsStringSync('inhibitor-blocked');
+      await expectLater(
+          c.power(PowerRequest_Action.SHUTDOWN),
+          throwsA(isA<DysException>()
+              .having((e) => e.kind, 'kind', DysErrorKind.failed)
+              .having((e) => e.message, 'msg', contains('Steam (Game running)'))));
+      d.fake('can').writeAsStringSync('challenge');
+      await expectLater(c.power(PowerRequest_Action.REBOOT), throwsA(_kind(DysErrorKind.forbidden)));
+      await expectLater(c.power(PowerRequest_Action.ACTION_UNSPECIFIED), throwsA(_kind(DysErrorKind.invalidInput)));
+      d.fake('can').deleteSync();
+      await Future<void>.delayed(const Duration(seconds: 2));
+      expect(power.readAsStringSync().trim(), 'Suspend', reason: 'refused calls never act');
+    });
+
+    test('info: sections with the fake GPU, session and network', () async {
+      final info = await c.getInfo();
+      String? get(String sec, String label) {
+        for (final s in info.sections.where((s) => s.title == sec)) {
+          for (final i in s.items.where((i) => i.label == label)) {
+            return i.value;
+          }
+        }
+        return null;
+      }
+
+      expect(info.sections.first.title, 'System');
+      expect(get('System', 'dysd'), isNotEmpty);
+      expect(get('System', 'Kernel'), isNotEmpty);
+      expect(get('GPU', 'VRAM'), '16 GiB');
+      expect(get('Network', 'enp4s0'), startsWith('192.168.2.56/24'));
+      expect(info.sections.map((s) => s.icon), containsAll(['system', 'cpu', 'memory']));
+      final again = await c.getInfo();
+      expect(again.collectedUnix, info.collectedUnix, reason: 'cached');
     });
 
     test('reboot to Windows starts the unit', () async {

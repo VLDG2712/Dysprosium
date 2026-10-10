@@ -58,5 +58,53 @@ class UpdateStatus_State extends $pb.ProtobufEnum {
   const UpdateStatus_State._(super.value, super.name);
 }
 
+class MinecraftActionRequest_Action extends $pb.ProtobufEnum {
+  static const MinecraftActionRequest_Action START =
+      MinecraftActionRequest_Action._(0, _omitEnumNames ? '' : 'START');
+  static const MinecraftActionRequest_Action STOP =
+      MinecraftActionRequest_Action._(1, _omitEnumNames ? '' : 'STOP');
+  static const MinecraftActionRequest_Action RESTART =
+      MinecraftActionRequest_Action._(2, _omitEnumNames ? '' : 'RESTART');
+
+  static const $core.List<MinecraftActionRequest_Action> values =
+      <MinecraftActionRequest_Action>[
+    START,
+    STOP,
+    RESTART,
+  ];
+
+  static final $core.List<MinecraftActionRequest_Action?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 2);
+  static MinecraftActionRequest_Action? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const MinecraftActionRequest_Action._(super.value, super.name);
+}
+
+class PowerRequest_Action extends $pb.ProtobufEnum {
+  static const PowerRequest_Action ACTION_UNSPECIFIED =
+      PowerRequest_Action._(0, _omitEnumNames ? '' : 'ACTION_UNSPECIFIED');
+  static const PowerRequest_Action REBOOT =
+      PowerRequest_Action._(1, _omitEnumNames ? '' : 'REBOOT');
+  static const PowerRequest_Action SHUTDOWN =
+      PowerRequest_Action._(2, _omitEnumNames ? '' : 'SHUTDOWN');
+  static const PowerRequest_Action SLEEP =
+      PowerRequest_Action._(3, _omitEnumNames ? '' : 'SLEEP');
+
+  static const $core.List<PowerRequest_Action> values = <PowerRequest_Action>[
+    ACTION_UNSPECIFIED,
+    REBOOT,
+    SHUTDOWN,
+    SLEEP,
+  ];
+
+  static final $core.List<PowerRequest_Action?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 3);
+  static PowerRequest_Action? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const PowerRequest_Action._(super.value, super.name);
+}
+
 const $core.bool _omitEnumNames =
     $core.bool.fromEnvironment('protobuf.omit_enum_names');

@@ -3,3 +3,5 @@
 g dys -
 u dysd - "Dysprosium daemon" /var/lib/dysd
 m dysd dys
+# nzxt-ctl's socket (/run/nzxt-ctl/daemon.sock) is root:nzxt-ctl 0660; creates the group if missing.
+m dysd nzxt-ctl

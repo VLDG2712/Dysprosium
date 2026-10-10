@@ -12,9 +12,14 @@ use dysd::server::SystemSvc;
 use tonic::{Code, Request};
 
 fn svc(addr: std::net::SocketAddr) -> SystemSvc {
-    let dir = std::env::temp_dir();
-    let actions = Actions::new(Arc::new(SystemRunner), Paths::new(&dir)).with_openrgb_addr(addr.to_string());
-    SystemSvc::new(Arc::new(actions))
+    // Own state dir per test: dysd saves lighting changes there (rgb.json).
+    let dir = tempfile::tempdir().unwrap().keep();
+    with_state(addr, &dir).0
+}
+
+fn with_state(addr: std::net::SocketAddr, dir: &std::path::Path) -> (SystemSvc, Arc<Actions>) {
+    let actions = Arc::new(Actions::new(Arc::new(SystemRunner), Paths::new(dir)).with_openrgb_addr(addr.to_string()));
+    (SystemSvc::new(actions.clone()), actions)
 }
 
 #[tokio::test]
@@ -194,4 +199,193 @@ async fn effect_ends_by_itself_when_openrgb_goes_away() {
     let after = frames(&m);
     tokio::time::sleep(Duration::from_millis(200)).await;
     assert_eq!(frames(&m), after, "no zombie effect task");
+}
+
+// ---- saved lighting --------------------------------------------------------------------------
+
+use dys_openrgb::Rgb;
+use dysd::rgb::KeeperTiming;
+
+const FAST: KeeperTiming =
+    KeeperTiming { fast: Duration::from_millis(20), fast_for: Duration::from_secs(60), slow: Duration::from_millis(20) };
+
+/// The NZXT controller as OpenRGB sees it on one boot: runtime id + hidraw node.
+fn nzxt(id: u32, hidraw: u32) -> dys_openrgb::Device {
+    let mut d = fan_device(id);
+    d.name = "NZXT RGB Controller".into();
+    d.vendor = "NZXT".into();
+    d.location = format!("HID: /dev/hidraw{hidraw}");
+    d
+}
+
+fn saved(dir: &std::path::Path) -> serde_json::Value {
+    serde_json::from_str(&std::fs::read_to_string(dir.join("rgb.json")).unwrap()).unwrap()
+}
+
+async fn eventually(what: &str, mut f: impl FnMut() -> bool) {
+    for _ in 0..100 {
+        if f() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("timed out waiting for: {what}");
+}
+
+#[tokio::test]
+async fn changes_are_saved_and_an_effect_comes_back_after_a_reboot() {
+    let dir = tempfile::tempdir().unwrap();
+    let m = mock::start(vec![nzxt(7, 3)]).await;
+    let (s, a) = with_state(m.addr, dir.path());
+
+    s.set_rgb_color(Request::new(SetRgbColorRequest { device_id: 7, rgb: 0x123456, off: false })).await.unwrap();
+    a.rgb().flush();
+    let j = saved(dir.path());
+    assert_eq!(j["devices"][0]["state"], serde_json::json!({"type": "color", "rgb": 0x123456}));
+    assert_eq!(j["devices"][0]["location"], "HID: /dev/hidraw3");
+
+    s.set_rgb_effect(Request::new(SetRgbEffectRequest { speed: 8, rgb: Some(0xff0000), ..effect(7, "breathing") }))
+        .await
+        .unwrap();
+    a.rgb().flush();
+    let j = saved(dir.path());
+    assert_eq!(j["devices"].as_array().unwrap().len(), 1, "replaced, not appended");
+    assert_eq!(
+        j["devices"][0]["state"],
+        serde_json::json!({"type": "effect", "effect": "breathing", "speed": 8, "brightness": 100, "rgb": 0xff0000})
+    );
+    let before = std::fs::read_to_string(dir.path().join("rgb.json")).unwrap();
+    drop((s, a, m));
+
+    // "Reboot": OpenRGB hands out another id, the hidraw node moved; dysd starts fresh.
+    let m2 = mock::start(vec![nzxt(2, 5)]).await;
+    let (s2, a2) = with_state(m2.addr, dir.path());
+    let keeper = a2.rgb().spawn_keeper(FAST);
+    eventually("effect frames on the new boot", || frames(&m2) >= 3).await;
+    let l = s2.list_rgb_devices(Request::new(ListRgbDevicesRequest {})).await.unwrap().into_inner();
+    assert_eq!(l.devices[0].software_effect, "breathing");
+    a2.rgb().flush();
+    assert_eq!(std::fs::read_to_string(dir.path().join("rgb.json")).unwrap(), before, "a restore doesn't save");
+    keeper.abort();
+}
+
+#[tokio::test]
+async fn a_hardware_mode_is_restored_with_its_values() {
+    let dir = tempfile::tempdir().unwrap();
+    let m = mock::start(vec![nzxt(7, 3)]).await;
+    let (s, a) = with_state(m.addr, dir.path());
+    s.set_rgb_mode(Request::new(SetRgbModeRequest {
+        device_id: 7,
+        mode_index: 2, // Rainbow: speed + direction
+        speed: Some(5),
+        direction: Some(1),
+        ..Default::default()
+    }))
+    .await
+    .unwrap();
+    a.rgb().flush();
+    assert_eq!(
+        saved(dir.path())["devices"][0]["state"],
+        serde_json::json!({"type": "mode", "mode": "Rainbow", "speed": 5, "direction": 1})
+    );
+    drop((s, a, m));
+
+    let m2 = mock::start(vec![nzxt(4, 3)]).await;
+    let (s2, a2) = with_state(m2.addr, dir.path());
+    let keeper = a2.rgb().spawn_keeper(FAST);
+    eventually("mode update", || !m2.state.lock().unwrap().mode_updates.is_empty()).await;
+    let l = s2.list_rgb_devices(Request::new(ListRgbDevicesRequest {})).await.unwrap().into_inner();
+    let d = &l.devices[0];
+    assert_eq!((d.active_mode, d.modes[2].speed, d.modes[2].direction), (2, 5, 1));
+    keeper.abort();
+}
+
+#[tokio::test]
+async fn off_is_saved_and_effect_none_forgets_the_device() {
+    let dir = tempfile::tempdir().unwrap();
+    let m = mock::start(vec![nzxt(7, 3), strip_device(8)]).await;
+    let (s, a) = with_state(m.addr, dir.path());
+    s.set_rgb_color(Request::new(SetRgbColorRequest { device_id: 7, rgb: 0, off: true })).await.unwrap();
+    s.set_rgb_effect(Request::new(effect(8, "rainbow"))).await.unwrap();
+    a.rgb().flush();
+    let j = saved(dir.path());
+    assert_eq!(j["devices"][0]["state"], serde_json::json!({"type": "off"}));
+    assert_eq!(j["devices"][1]["state"]["type"], "effect");
+
+    s.set_rgb_effect(Request::new(effect(8, "none"))).await.unwrap();
+    a.rgb().flush();
+    assert_eq!(saved(dir.path())["devices"].as_array().unwrap().len(), 1);
+
+    s.set_rgb_effect(Request::new(effect(7, "none"))).await.unwrap();
+    a.rgb().flush();
+    assert!(!dir.path().join("rgb.json").exists(), "nothing saved -> no file");
+}
+
+#[tokio::test]
+async fn keeper_brings_the_effect_back_after_openrgb_restarts() {
+    let dir = tempfile::tempdir().unwrap();
+    let m = mock::start(vec![nzxt(7, 3)]).await;
+    let (s, a) = with_state(m.addr, dir.path());
+    let keeper = a.rgb().spawn_keeper(FAST);
+    s.set_rgb_effect(Request::new(effect(7, "wave"))).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    m.kick(); // OpenRGB restarted: connection gone, the effect task ends by itself
+    eventually("second connection", || m.state.lock().unwrap().connections >= 2).await;
+    let n = frames(&m);
+    eventually("frames after the restart", || frames(&m) >= n + 3).await;
+    let l = s.list_rgb_devices(Request::new(ListRgbDevicesRequest {})).await.unwrap().into_inner();
+    assert_eq!(l.devices[0].software_effect, "wave");
+    keeper.abort();
+}
+
+#[tokio::test]
+async fn keeper_waits_for_a_device_openrgb_detects_late() {
+    let dir = tempfile::tempdir().unwrap();
+    {
+        let m = mock::start(vec![nzxt(7, 3)]).await;
+        let (s, a) = with_state(m.addr, dir.path());
+        s.set_rgb_color(Request::new(SetRgbColorRequest { device_id: 7, rgb: 0x00ff00, off: false })).await.unwrap();
+        a.rgb().flush();
+    }
+    // OpenRGB is up but still detecting: no devices yet.
+    let m = mock::start(vec![]).await;
+    let (_s, a) = with_state(m.addr, dir.path());
+    let keeper = a.rgb().spawn_keeper(FAST);
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    assert!(m.state.lock().unwrap().led_updates.is_empty());
+
+    m.state.lock().unwrap().devices.push(nzxt(1, 4));
+    m.push(0, 100, &[]); // DEVICE_LIST_UPDATED
+    eventually("colour on the late device", || {
+        m.state.lock().unwrap().led_updates.last().is_some_and(|(id, c)| *id == 1 && c[0] == Rgb::from_hex(0x00ff00))
+    })
+    .await;
+    keeper.abort();
+}
+
+#[tokio::test]
+async fn keeper_stays_away_from_openrgb_when_nothing_is_saved() {
+    let dir = tempfile::tempdir().unwrap();
+    let m = mock::start(vec![nzxt(7, 3)]).await;
+    let (_s, a) = with_state(m.addr, dir.path());
+    let keeper = a.rgb().spawn_keeper(FAST);
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_eq!(m.state.lock().unwrap().connections, 0);
+    keeper.abort();
+}
+
+#[tokio::test]
+async fn keeper_does_not_restart_an_effect_the_user_just_started() {
+    let dir = tempfile::tempdir().unwrap();
+    let m = mock::start(vec![nzxt(7, 3)]).await;
+    let (s, a) = with_state(m.addr, dir.path());
+    let keeper = a.rgb().spawn_keeper(FAST);
+    s.set_rgb_effect(Request::new(effect(7, "rainbow"))).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    // Starting an effect blanks the LEDs once; rainbow frames are never all black. A second blank
+    // frame would mean the keeper "restored" (restarted) the effect.
+    let blanks = m.state.lock().unwrap().led_updates.iter().filter(|(_, c)| c.iter().all(|x| *x == Rgb::BLACK)).count();
+    assert_eq!(blanks, 1);
+    keeper.abort();
 }

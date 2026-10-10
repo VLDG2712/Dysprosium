@@ -42,7 +42,16 @@ impl Daemon {
         let server_key_pem = read(&state.server_key())?;
         let server_cert_der = dys_tls::cert_pem_to_der(&server_cert_pem)?;
         let allowlist = Arc::new(RwLock::new(Allowlist::load(&state.clients())?));
-        let mut actions = Actions::new(Arc::new(SystemRunner), Paths::new(state.path()));
+        let cfg_path = crate::config::Config::path();
+        let config = crate::config::Config::load(&cfg_path)?;
+        info!(
+            path = %cfg_path.display(),
+            minecraft = config.minecraft.is_some(),
+            alerts = config.alerts.is_some(),
+            fan_mode_changes = config.cooling.allow_mode_changes,
+            "config loaded"
+        );
+        let mut actions = Actions::new(Arc::new(SystemRunner), Paths::new(state.path())).with_config(config);
         // Dev/testing: another OpenRGB SDK server than 127.0.0.1:6742.
         if let Some(addr) = std::env::var_os("DYSD_OPENRGB_ADDR") {
             actions = actions.with_openrgb_addr(addr.to_string_lossy());
