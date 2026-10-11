@@ -335,6 +335,20 @@ void main() {
       expect(power.readAsStringSync().trim(), 'Suspend', reason: 'refused calls never act');
     });
 
+    test('GPU detail: query fields + process list (fake nvidia-smi)', () async {
+      final g = await c.getGpuDetail();
+      expect(g.available, isTrue, reason: g.error);
+      expect([g.pstate, g.pcieGen, g.pcieGenMax, g.pcieWidth], ['P8', 1, 4, 16]);
+      expect(g.memTotal.toInt(), 16376 * 1024 * 1024);
+      expect(g.processes.single.name, 'kwin_wayland');
+      expect(g.processes.single.memUsed.toInt(), 312 << 20);
+
+      final st = await c.getStats();
+      expect(st.cpu.coreMhz, isNotEmpty);
+      expect(st.cpu.tasksTotal, greaterThan(0));
+      expect(st.mem.cached.toInt(), greaterThan(0));
+    });
+
     test('info: sections with the fake GPU, session and network', () async {
       final info = await c.getInfo();
       String? get(String sec, String label) {

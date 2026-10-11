@@ -331,12 +331,10 @@ void main() {
       await t.pump();
       expect(find.text('50 %'), findsOneWidget);
       expect(find.text('↓ 10 Mb/s'), findsOneWidget, reason: '1.25 MB/s = 10 Mb/s');
-      expect(find.text('game'), findsOneWidget);
-      await t.tap(find.text('RAM').last);
-      await t.pump();
-      expect(find.text('firefox'), findsOneWidget);
+      expect(find.text('Top processes'), findsNothing, reason: 'moved into the CPU/RAM detail pages');
 
       c.statsCtl!.addError(DysException(DysErrorKind.unreachable, 'gone'));
+      await t.pump();
       await t.pump();
       expect(find.textContaining('Reconnecting'), findsOneWidget);
       await t.pump(const Duration(seconds: 6));

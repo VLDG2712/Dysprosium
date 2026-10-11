@@ -28,6 +28,17 @@ impl Output {
             (None, None) => "killed by signal".to_owned(),
         }
     }
+
+    /// Like [`Output::error_text`], but falls back to stdout (nvidia-smi reports bad query fields
+    /// there) before the exit code.
+    pub fn error_text_or_stdout(&self) -> String {
+        if self.stderr.trim().is_empty()
+            && let Some(l) = self.stdout.lines().map(str::trim).find(|l| !l.is_empty())
+        {
+            return l.to_owned();
+        }
+        self.error_text()
+    }
 }
 
 #[tonic::async_trait]

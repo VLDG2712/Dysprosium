@@ -37,6 +37,9 @@ service System {
   // stream is open (all watchers share one sampler); GetStats returns one sample.
   rpc GetStats(GetStatsRequest) returns (Stats);
   rpc WatchStats(WatchStatsRequest) returns (stream Stats);
+  // Everything nvidia-smi knows about the GPU (clocks, PCIe, encoder, ...) plus the processes using
+  // it. Separate from the stats stream: one extra nvidia-smi call, only while the phone asks.
+  rpc GetGpuDetail(GetGpuDetailRequest) returns (GpuDetail);
 
   // Pump/fan through nzxt-ctl's socket. Reading needs nothing; SetFanMode needs nzxt-ctl with the
   // SetMode request and `[cooling] allow_mode_changes = true` in /etc/dysd/dysd.toml.
@@ -266,6 +269,15 @@ message CpuStats {
   float freq_mhz_avg = 4;
   float freq_mhz_max = 5;
   optional float temp_c = 6; // package temperature
+  // Share of all CPU time since the last sample (usage_pct = user + system + iowait + irq/steal).
+  float user_pct = 7;
+  float system_pct = 8;
+  float iowait_pct = 9;
+  repeated float core_mhz = 10; // per logical CPU, same order as core_pct
+  // Hybrid CPUs: true for efficiency-core threads (same order as core_pct); empty otherwise.
+  repeated bool core_is_e = 11;
+  uint32 tasks_running = 12; // /proc/loadavg: runnable tasks / all tasks (threads included)
+  uint32 tasks_total = 13;
 }
 
 message MemStats {
@@ -275,6 +287,9 @@ message MemStats {
   uint64 available = 3;
   uint64 swap_total = 4;
   uint64 swap_used = 5;
+  uint64 cached = 6; // page cache + reclaimable slab (freed under pressure)
+  uint64 buffers = 7;
+  uint64 shared = 8; // tmpfs / shared memory
 }
 
 // A mounted filesystem dysd can see (its sandbox hides /home: a separate /home partition is not
@@ -304,6 +319,43 @@ message NetStats {
   uint64 rx_total = 5;
   uint64 tx_total = 6;
   int32 link_mbps = 7; // -1 = unknown (Wi-Fi, tun)
+}
+
+message GetGpuDetailRequest {}
+
+message GpuDetail {
+  bool available = 1;
+  string error = 2; // why not available, or what failed (processes)
+  string name = 3;
+  string driver = 4;
+  string pstate = 5; // P0 (max) .. P8 (idle)
+  float util_pct = 6;
+  float mem_util_pct = 7; // memory controller busy
+  optional float encoder_pct = 8;
+  optional float decoder_pct = 9;
+  uint64 mem_used = 10; // bytes
+  uint64 mem_total = 11;
+  float temp_c = 12;
+  float power_w = 13;
+  float power_limit_w = 14;
+  float power_max_w = 15;
+  float clock_mhz = 16;
+  float clock_max_mhz = 17;
+  float mem_clock_mhz = 18;
+  float mem_clock_max_mhz = 19;
+  optional float fan_pct = 20;
+  uint32 pcie_gen = 21;
+  uint32 pcie_gen_max = 22;
+  uint32 pcie_width = 23;
+  uint32 pcie_width_max = 24;
+  repeated GpuProcess processes = 25; // biggest VRAM first
+}
+
+message GpuProcess {
+  uint32 pid = 1;
+  string name = 2;
+  string kind = 3; // G (graphics), C (compute), C+G, ...
+  uint64 mem_used = 4; // bytes; 0 if the driver doesn't say
 }
 
 message GpuStats {

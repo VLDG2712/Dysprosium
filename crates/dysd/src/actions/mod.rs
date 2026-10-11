@@ -94,6 +94,8 @@ pub struct Actions {
     power_delay: Duration,
     /// GetInfo cache + where it reads from.
     info: info::InfoCache,
+    /// /proc for GPU process names (tests point it elsewhere).
+    stats_proc: PathBuf,
 }
 
 fn now_unix() -> u64 {
@@ -122,6 +124,7 @@ impl Actions {
             alerter: Alerter::new(None),
             power_delay: Duration::from_millis(1500),
             info: info::InfoCache::new(info::Root::default()),
+            stats_proc: Sources::default().proc,
             runner,
         }
     }
@@ -143,6 +146,7 @@ impl Actions {
     /// Read /proc and /sys elsewhere (tests).
     #[must_use]
     pub fn with_stats_sources(mut self, src: Sources) -> Self {
+        self.stats_proc = src.proc.clone();
         self.stats = StatsHub::new(Sampler::new(src, self.runner.clone()), Some(self.cooling.clone()));
         self
     }
@@ -353,6 +357,12 @@ impl Actions {
             }
         });
         Ok(self.power_delay)
+    }
+
+    // ---- GPU detail ----------------------------------------------------------------------
+
+    pub async fn gpu_detail(&self) -> dys_core::pb::GpuDetail {
+        crate::stats::gpu_detail(self.runner.as_ref(), &self.stats_proc).await
     }
 
     // ---- info ----------------------------------------------------------------------------

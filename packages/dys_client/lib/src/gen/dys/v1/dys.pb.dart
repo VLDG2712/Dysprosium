@@ -2063,6 +2063,13 @@ class CpuStats extends $pb.GeneratedMessage {
     $core.double? freqMhzAvg,
     $core.double? freqMhzMax,
     $core.double? tempC,
+    $core.double? userPct,
+    $core.double? systemPct,
+    $core.double? iowaitPct,
+    $core.Iterable<$core.double>? coreMhz,
+    $core.Iterable<$core.bool>? coreIsE,
+    $core.int? tasksRunning,
+    $core.int? tasksTotal,
   }) {
     final result = CpuStats._();
     if (model != null) result.model = model;
@@ -2071,6 +2078,13 @@ class CpuStats extends $pb.GeneratedMessage {
     if (freqMhzAvg != null) result.freqMhzAvg = freqMhzAvg;
     if (freqMhzMax != null) result.freqMhzMax = freqMhzMax;
     if (tempC != null) result.tempC = tempC;
+    if (userPct != null) result.userPct = userPct;
+    if (systemPct != null) result.systemPct = systemPct;
+    if (iowaitPct != null) result.iowaitPct = iowaitPct;
+    if (coreMhz != null) result.coreMhz.addAll(coreMhz);
+    if (coreIsE != null) result.coreIsE.addAll(coreIsE);
+    if (tasksRunning != null) result.tasksRunning = tasksRunning;
+    if (tasksTotal != null) result.tasksTotal = tasksTotal;
     return result;
   }
 
@@ -2093,6 +2107,15 @@ class CpuStats extends $pb.GeneratedMessage {
     ..aD(4, _omitFieldNames ? '' : 'freqMhzAvg', fieldType: $pb.PbFieldType.OF)
     ..aD(5, _omitFieldNames ? '' : 'freqMhzMax', fieldType: $pb.PbFieldType.OF)
     ..aD(6, _omitFieldNames ? '' : 'tempC', fieldType: $pb.PbFieldType.OF)
+    ..aD(7, _omitFieldNames ? '' : 'userPct', fieldType: $pb.PbFieldType.OF)
+    ..aD(8, _omitFieldNames ? '' : 'systemPct', fieldType: $pb.PbFieldType.OF)
+    ..aD(9, _omitFieldNames ? '' : 'iowaitPct', fieldType: $pb.PbFieldType.OF)
+    ..p<$core.double>(10, _omitFieldNames ? '' : 'coreMhz', $pb.PbFieldType.KF)
+    ..p<$core.bool>(11, _omitFieldNames ? '' : 'coreIsE', $pb.PbFieldType.KB)
+    ..aI(12, _omitFieldNames ? '' : 'tasksRunning',
+        fieldType: $pb.PbFieldType.OU3)
+    ..aI(13, _omitFieldNames ? '' : 'tasksTotal',
+        fieldType: $pb.PbFieldType.OU3)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2162,6 +2185,59 @@ class CpuStats extends $pb.GeneratedMessage {
   $core.bool hasTempC() => $_has(5);
   @$pb.TagNumber(6)
   void clearTempC() => $_clearField(6);
+
+  /// Share of all CPU time since the last sample (usage_pct = user + system + iowait + irq/steal).
+  @$pb.TagNumber(7)
+  $core.double get userPct => $_getN(6);
+  @$pb.TagNumber(7)
+  set userPct($core.double value) => $_setFloat(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasUserPct() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearUserPct() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.double get systemPct => $_getN(7);
+  @$pb.TagNumber(8)
+  set systemPct($core.double value) => $_setFloat(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasSystemPct() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearSystemPct() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.double get iowaitPct => $_getN(8);
+  @$pb.TagNumber(9)
+  set iowaitPct($core.double value) => $_setFloat(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasIowaitPct() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearIowaitPct() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $pb.PbList<$core.double> get coreMhz => $_getList(9);
+
+  /// Hybrid CPUs: true for efficiency-core threads (same order as core_pct); empty otherwise.
+  @$pb.TagNumber(11)
+  $pb.PbList<$core.bool> get coreIsE => $_getList(10);
+
+  @$pb.TagNumber(12)
+  $core.int get tasksRunning => $_getIZ(11);
+  @$pb.TagNumber(12)
+  set tasksRunning($core.int value) => $_setUnsignedInt32(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasTasksRunning() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearTasksRunning() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.int get tasksTotal => $_getIZ(12);
+  @$pb.TagNumber(13)
+  set tasksTotal($core.int value) => $_setUnsignedInt32(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasTasksTotal() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearTasksTotal() => $_clearField(13);
 }
 
 class MemStats extends $pb.GeneratedMessage {
@@ -2171,6 +2247,9 @@ class MemStats extends $pb.GeneratedMessage {
     $fixnum.Int64? available,
     $fixnum.Int64? swapTotal,
     $fixnum.Int64? swapUsed,
+    $fixnum.Int64? cached,
+    $fixnum.Int64? buffers,
+    $fixnum.Int64? shared,
   }) {
     final result = MemStats._();
     if (total != null) result.total = total;
@@ -2178,6 +2257,9 @@ class MemStats extends $pb.GeneratedMessage {
     if (available != null) result.available = available;
     if (swapTotal != null) result.swapTotal = swapTotal;
     if (swapUsed != null) result.swapUsed = swapUsed;
+    if (cached != null) result.cached = cached;
+    if (buffers != null) result.buffers = buffers;
+    if (shared != null) result.shared = shared;
     return result;
   }
 
@@ -2206,6 +2288,12 @@ class MemStats extends $pb.GeneratedMessage {
         defaultOrMaker: $fixnum.Int64.ZERO)
     ..a<$fixnum.Int64>(
         5, _omitFieldNames ? '' : 'swapUsed', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(6, _omitFieldNames ? '' : 'cached', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(7, _omitFieldNames ? '' : 'buffers', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(8, _omitFieldNames ? '' : 'shared', $pb.PbFieldType.OU6,
         defaultOrMaker: $fixnum.Int64.ZERO)
     ..hasRequiredFields = false;
 
@@ -2274,6 +2362,33 @@ class MemStats extends $pb.GeneratedMessage {
   $core.bool hasSwapUsed() => $_has(4);
   @$pb.TagNumber(5)
   void clearSwapUsed() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $fixnum.Int64 get cached => $_getI64(5);
+  @$pb.TagNumber(6)
+  set cached($fixnum.Int64 value) => $_setInt64(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasCached() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearCached() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $fixnum.Int64 get buffers => $_getI64(6);
+  @$pb.TagNumber(7)
+  set buffers($fixnum.Int64 value) => $_setInt64(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasBuffers() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearBuffers() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $fixnum.Int64 get shared => $_getI64(7);
+  @$pb.TagNumber(8)
+  set shared($fixnum.Int64 value) => $_setInt64(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasShared() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearShared() => $_clearField(8);
 }
 
 /// A mounted filesystem dysd can see (its sandbox hides /home: a separate /home partition is not
@@ -2615,6 +2730,488 @@ class NetStats extends $pb.GeneratedMessage {
   $core.bool hasLinkMbps() => $_has(6);
   @$pb.TagNumber(7)
   void clearLinkMbps() => $_clearField(7);
+}
+
+class GetGpuDetailRequest extends $pb.GeneratedMessage {
+  factory GetGpuDetailRequest() => GetGpuDetailRequest._();
+
+  GetGpuDetailRequest._();
+
+  factory GetGpuDetailRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGpuDetailRequest()..mergeFromBuffer(data, registry);
+  factory GetGpuDetailRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGpuDetailRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGpuDetailRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: GetGpuDetailRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGpuDetailRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGpuDetailRequest copyWith(void Function(GetGpuDetailRequest) updates) =>
+      super.copyWith((message) => updates(message as GetGpuDetailRequest))
+          as GetGpuDetailRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use GetGpuDetailRequest() / GetGpuDetailRequest.new instead')
+  static GetGpuDetailRequest create() => GetGpuDetailRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetGpuDetailRequest._();
+  @$core.override
+  GetGpuDetailRequest createEmptyInstance() => GetGpuDetailRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetGpuDetailRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGpuDetailRequest>(
+          GetGpuDetailRequest.$_createMessage);
+  static GetGpuDetailRequest? _defaultInstance;
+}
+
+class GpuDetail extends $pb.GeneratedMessage {
+  factory GpuDetail({
+    $core.bool? available,
+    $core.String? error,
+    $core.String? name,
+    $core.String? driver,
+    $core.String? pstate,
+    $core.double? utilPct,
+    $core.double? memUtilPct,
+    $core.double? encoderPct,
+    $core.double? decoderPct,
+    $fixnum.Int64? memUsed,
+    $fixnum.Int64? memTotal,
+    $core.double? tempC,
+    $core.double? powerW,
+    $core.double? powerLimitW,
+    $core.double? powerMaxW,
+    $core.double? clockMhz,
+    $core.double? clockMaxMhz,
+    $core.double? memClockMhz,
+    $core.double? memClockMaxMhz,
+    $core.double? fanPct,
+    $core.int? pcieGen,
+    $core.int? pcieGenMax,
+    $core.int? pcieWidth,
+    $core.int? pcieWidthMax,
+    $core.Iterable<GpuProcess>? processes,
+  }) {
+    final result = GpuDetail._();
+    if (available != null) result.available = available;
+    if (error != null) result.error = error;
+    if (name != null) result.name = name;
+    if (driver != null) result.driver = driver;
+    if (pstate != null) result.pstate = pstate;
+    if (utilPct != null) result.utilPct = utilPct;
+    if (memUtilPct != null) result.memUtilPct = memUtilPct;
+    if (encoderPct != null) result.encoderPct = encoderPct;
+    if (decoderPct != null) result.decoderPct = decoderPct;
+    if (memUsed != null) result.memUsed = memUsed;
+    if (memTotal != null) result.memTotal = memTotal;
+    if (tempC != null) result.tempC = tempC;
+    if (powerW != null) result.powerW = powerW;
+    if (powerLimitW != null) result.powerLimitW = powerLimitW;
+    if (powerMaxW != null) result.powerMaxW = powerMaxW;
+    if (clockMhz != null) result.clockMhz = clockMhz;
+    if (clockMaxMhz != null) result.clockMaxMhz = clockMaxMhz;
+    if (memClockMhz != null) result.memClockMhz = memClockMhz;
+    if (memClockMaxMhz != null) result.memClockMaxMhz = memClockMaxMhz;
+    if (fanPct != null) result.fanPct = fanPct;
+    if (pcieGen != null) result.pcieGen = pcieGen;
+    if (pcieGenMax != null) result.pcieGenMax = pcieGenMax;
+    if (pcieWidth != null) result.pcieWidth = pcieWidth;
+    if (pcieWidthMax != null) result.pcieWidthMax = pcieWidthMax;
+    if (processes != null) result.processes.addAll(processes);
+    return result;
+  }
+
+  GpuDetail._();
+
+  factory GpuDetail.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GpuDetail()..mergeFromBuffer(data, registry);
+  factory GpuDetail.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GpuDetail()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GpuDetail',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: GpuDetail.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'available')
+    ..aOS(2, _omitFieldNames ? '' : 'error')
+    ..aOS(3, _omitFieldNames ? '' : 'name')
+    ..aOS(4, _omitFieldNames ? '' : 'driver')
+    ..aOS(5, _omitFieldNames ? '' : 'pstate')
+    ..aD(6, _omitFieldNames ? '' : 'utilPct', fieldType: $pb.PbFieldType.OF)
+    ..aD(7, _omitFieldNames ? '' : 'memUtilPct', fieldType: $pb.PbFieldType.OF)
+    ..aD(8, _omitFieldNames ? '' : 'encoderPct', fieldType: $pb.PbFieldType.OF)
+    ..aD(9, _omitFieldNames ? '' : 'decoderPct', fieldType: $pb.PbFieldType.OF)
+    ..a<$fixnum.Int64>(
+        10, _omitFieldNames ? '' : 'memUsed', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(
+        11, _omitFieldNames ? '' : 'memTotal', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..aD(12, _omitFieldNames ? '' : 'tempC', fieldType: $pb.PbFieldType.OF)
+    ..aD(13, _omitFieldNames ? '' : 'powerW', fieldType: $pb.PbFieldType.OF)
+    ..aD(14, _omitFieldNames ? '' : 'powerLimitW',
+        fieldType: $pb.PbFieldType.OF)
+    ..aD(15, _omitFieldNames ? '' : 'powerMaxW', fieldType: $pb.PbFieldType.OF)
+    ..aD(16, _omitFieldNames ? '' : 'clockMhz', fieldType: $pb.PbFieldType.OF)
+    ..aD(17, _omitFieldNames ? '' : 'clockMaxMhz',
+        fieldType: $pb.PbFieldType.OF)
+    ..aD(18, _omitFieldNames ? '' : 'memClockMhz',
+        fieldType: $pb.PbFieldType.OF)
+    ..aD(19, _omitFieldNames ? '' : 'memClockMaxMhz',
+        fieldType: $pb.PbFieldType.OF)
+    ..aD(20, _omitFieldNames ? '' : 'fanPct', fieldType: $pb.PbFieldType.OF)
+    ..aI(21, _omitFieldNames ? '' : 'pcieGen', fieldType: $pb.PbFieldType.OU3)
+    ..aI(22, _omitFieldNames ? '' : 'pcieGenMax',
+        fieldType: $pb.PbFieldType.OU3)
+    ..aI(23, _omitFieldNames ? '' : 'pcieWidth', fieldType: $pb.PbFieldType.OU3)
+    ..aI(24, _omitFieldNames ? '' : 'pcieWidthMax',
+        fieldType: $pb.PbFieldType.OU3)
+    ..pPM<GpuProcess>(25, _omitFieldNames ? '' : 'processes',
+        subBuilder: GpuProcess.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GpuDetail clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GpuDetail copyWith(void Function(GpuDetail) updates) =>
+      super.copyWith((message) => updates(message as GpuDetail)) as GpuDetail;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GpuDetail() / GpuDetail.new instead')
+  static GpuDetail create() => GpuDetail._();
+  static $pb.GeneratedMessage $_createMessage() => GpuDetail._();
+  @$core.override
+  GpuDetail createEmptyInstance() => GpuDetail._();
+  @$core.pragma('dart2js:noInline')
+  static GpuDetail getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GpuDetail>(GpuDetail.$_createMessage);
+  static GpuDetail? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get available => $_getBF(0);
+  @$pb.TagNumber(1)
+  set available($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAvailable() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAvailable() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get error => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set error($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasError() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearError() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get name => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set name($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearName() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get driver => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set driver($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasDriver() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearDriver() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get pstate => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set pstate($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasPstate() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearPstate() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.double get utilPct => $_getN(5);
+  @$pb.TagNumber(6)
+  set utilPct($core.double value) => $_setFloat(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasUtilPct() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearUtilPct() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.double get memUtilPct => $_getN(6);
+  @$pb.TagNumber(7)
+  set memUtilPct($core.double value) => $_setFloat(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasMemUtilPct() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearMemUtilPct() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.double get encoderPct => $_getN(7);
+  @$pb.TagNumber(8)
+  set encoderPct($core.double value) => $_setFloat(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasEncoderPct() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearEncoderPct() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.double get decoderPct => $_getN(8);
+  @$pb.TagNumber(9)
+  set decoderPct($core.double value) => $_setFloat(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasDecoderPct() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearDecoderPct() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $fixnum.Int64 get memUsed => $_getI64(9);
+  @$pb.TagNumber(10)
+  set memUsed($fixnum.Int64 value) => $_setInt64(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasMemUsed() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearMemUsed() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $fixnum.Int64 get memTotal => $_getI64(10);
+  @$pb.TagNumber(11)
+  set memTotal($fixnum.Int64 value) => $_setInt64(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasMemTotal() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearMemTotal() => $_clearField(11);
+
+  @$pb.TagNumber(12)
+  $core.double get tempC => $_getN(11);
+  @$pb.TagNumber(12)
+  set tempC($core.double value) => $_setFloat(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasTempC() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearTempC() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.double get powerW => $_getN(12);
+  @$pb.TagNumber(13)
+  set powerW($core.double value) => $_setFloat(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasPowerW() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearPowerW() => $_clearField(13);
+
+  @$pb.TagNumber(14)
+  $core.double get powerLimitW => $_getN(13);
+  @$pb.TagNumber(14)
+  set powerLimitW($core.double value) => $_setFloat(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasPowerLimitW() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearPowerLimitW() => $_clearField(14);
+
+  @$pb.TagNumber(15)
+  $core.double get powerMaxW => $_getN(14);
+  @$pb.TagNumber(15)
+  set powerMaxW($core.double value) => $_setFloat(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasPowerMaxW() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearPowerMaxW() => $_clearField(15);
+
+  @$pb.TagNumber(16)
+  $core.double get clockMhz => $_getN(15);
+  @$pb.TagNumber(16)
+  set clockMhz($core.double value) => $_setFloat(15, value);
+  @$pb.TagNumber(16)
+  $core.bool hasClockMhz() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearClockMhz() => $_clearField(16);
+
+  @$pb.TagNumber(17)
+  $core.double get clockMaxMhz => $_getN(16);
+  @$pb.TagNumber(17)
+  set clockMaxMhz($core.double value) => $_setFloat(16, value);
+  @$pb.TagNumber(17)
+  $core.bool hasClockMaxMhz() => $_has(16);
+  @$pb.TagNumber(17)
+  void clearClockMaxMhz() => $_clearField(17);
+
+  @$pb.TagNumber(18)
+  $core.double get memClockMhz => $_getN(17);
+  @$pb.TagNumber(18)
+  set memClockMhz($core.double value) => $_setFloat(17, value);
+  @$pb.TagNumber(18)
+  $core.bool hasMemClockMhz() => $_has(17);
+  @$pb.TagNumber(18)
+  void clearMemClockMhz() => $_clearField(18);
+
+  @$pb.TagNumber(19)
+  $core.double get memClockMaxMhz => $_getN(18);
+  @$pb.TagNumber(19)
+  set memClockMaxMhz($core.double value) => $_setFloat(18, value);
+  @$pb.TagNumber(19)
+  $core.bool hasMemClockMaxMhz() => $_has(18);
+  @$pb.TagNumber(19)
+  void clearMemClockMaxMhz() => $_clearField(19);
+
+  @$pb.TagNumber(20)
+  $core.double get fanPct => $_getN(19);
+  @$pb.TagNumber(20)
+  set fanPct($core.double value) => $_setFloat(19, value);
+  @$pb.TagNumber(20)
+  $core.bool hasFanPct() => $_has(19);
+  @$pb.TagNumber(20)
+  void clearFanPct() => $_clearField(20);
+
+  @$pb.TagNumber(21)
+  $core.int get pcieGen => $_getIZ(20);
+  @$pb.TagNumber(21)
+  set pcieGen($core.int value) => $_setUnsignedInt32(20, value);
+  @$pb.TagNumber(21)
+  $core.bool hasPcieGen() => $_has(20);
+  @$pb.TagNumber(21)
+  void clearPcieGen() => $_clearField(21);
+
+  @$pb.TagNumber(22)
+  $core.int get pcieGenMax => $_getIZ(21);
+  @$pb.TagNumber(22)
+  set pcieGenMax($core.int value) => $_setUnsignedInt32(21, value);
+  @$pb.TagNumber(22)
+  $core.bool hasPcieGenMax() => $_has(21);
+  @$pb.TagNumber(22)
+  void clearPcieGenMax() => $_clearField(22);
+
+  @$pb.TagNumber(23)
+  $core.int get pcieWidth => $_getIZ(22);
+  @$pb.TagNumber(23)
+  set pcieWidth($core.int value) => $_setUnsignedInt32(22, value);
+  @$pb.TagNumber(23)
+  $core.bool hasPcieWidth() => $_has(22);
+  @$pb.TagNumber(23)
+  void clearPcieWidth() => $_clearField(23);
+
+  @$pb.TagNumber(24)
+  $core.int get pcieWidthMax => $_getIZ(23);
+  @$pb.TagNumber(24)
+  set pcieWidthMax($core.int value) => $_setUnsignedInt32(23, value);
+  @$pb.TagNumber(24)
+  $core.bool hasPcieWidthMax() => $_has(23);
+  @$pb.TagNumber(24)
+  void clearPcieWidthMax() => $_clearField(24);
+
+  @$pb.TagNumber(25)
+  $pb.PbList<GpuProcess> get processes => $_getList(24);
+}
+
+class GpuProcess extends $pb.GeneratedMessage {
+  factory GpuProcess({
+    $core.int? pid,
+    $core.String? name,
+    $core.String? kind,
+    $fixnum.Int64? memUsed,
+  }) {
+    final result = GpuProcess._();
+    if (pid != null) result.pid = pid;
+    if (name != null) result.name = name;
+    if (kind != null) result.kind = kind;
+    if (memUsed != null) result.memUsed = memUsed;
+    return result;
+  }
+
+  GpuProcess._();
+
+  factory GpuProcess.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GpuProcess()..mergeFromBuffer(data, registry);
+  factory GpuProcess.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GpuProcess()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GpuProcess',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'dys.v1'),
+      createEmptyInstance: GpuProcess.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'pid', fieldType: $pb.PbFieldType.OU3)
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'kind')
+    ..a<$fixnum.Int64>(4, _omitFieldNames ? '' : 'memUsed', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GpuProcess clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GpuProcess copyWith(void Function(GpuProcess) updates) =>
+      super.copyWith((message) => updates(message as GpuProcess)) as GpuProcess;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GpuProcess() / GpuProcess.new instead')
+  static GpuProcess create() => GpuProcess._();
+  static $pb.GeneratedMessage $_createMessage() => GpuProcess._();
+  @$core.override
+  GpuProcess createEmptyInstance() => GpuProcess._();
+  @$core.pragma('dart2js:noInline')
+  static GpuProcess getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GpuProcess>(GpuProcess.$_createMessage);
+  static GpuProcess? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get pid => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set pid($core.int value) => $_setUnsignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPid() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPid() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get kind => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set kind($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasKind() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearKind() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get memUsed => $_getI64(3);
+  @$pb.TagNumber(4)
+  set memUsed($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasMemUsed() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearMemUsed() => $_clearField(4);
 }
 
 class GpuStats extends $pb.GeneratedMessage {

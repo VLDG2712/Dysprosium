@@ -222,6 +222,10 @@ class DysClient {
     return Duration(milliseconds: r.delayMs);
   }
 
+  /// GPU clocks, PCIe, encoder, VRAM and the processes using it (one extra nvidia-smi call).
+  Future<pb.GpuDetail> getGpuDetail() =>
+      _call((s, o) => s.getGpuDetail(pb.GetGpuDetailRequest(), options: o), timeout: const Duration(seconds: 15));
+
   /// OS, kernel, shell, desktop, CPU, GPU, RAM, disks, network (cached 60 s by dysd).
   Future<pb.SystemInfo> getInfo({bool refresh = false}) =>
       _call((s, o) => s.getInfo(pb.GetInfoRequest(refresh: refresh), options: o), timeout: const Duration(seconds: 20));

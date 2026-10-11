@@ -568,6 +568,13 @@ const CpuStats$json = {
     {'1': 'freq_mhz_avg', '3': 4, '4': 1, '5': 2, '10': 'freqMhzAvg'},
     {'1': 'freq_mhz_max', '3': 5, '4': 1, '5': 2, '10': 'freqMhzMax'},
     {'1': 'temp_c', '3': 6, '4': 1, '5': 2, '9': 0, '10': 'tempC', '17': true},
+    {'1': 'user_pct', '3': 7, '4': 1, '5': 2, '10': 'userPct'},
+    {'1': 'system_pct', '3': 8, '4': 1, '5': 2, '10': 'systemPct'},
+    {'1': 'iowait_pct', '3': 9, '4': 1, '5': 2, '10': 'iowaitPct'},
+    {'1': 'core_mhz', '3': 10, '4': 3, '5': 2, '10': 'coreMhz'},
+    {'1': 'core_is_e', '3': 11, '4': 3, '5': 8, '10': 'coreIsE'},
+    {'1': 'tasks_running', '3': 12, '4': 1, '5': 13, '10': 'tasksRunning'},
+    {'1': 'tasks_total', '3': 13, '4': 1, '5': 13, '10': 'tasksTotal'},
   ],
   '8': [
     {'1': '_temp_c'},
@@ -579,7 +586,11 @@ final $typed_data.Uint8List cpuStatsDescriptor = $convert.base64Decode(
     'CghDcHVTdGF0cxIUCgVtb2RlbBgBIAEoCVIFbW9kZWwSGwoJdXNhZ2VfcGN0GAIgASgCUgh1c2'
     'FnZVBjdBIZCghjb3JlX3BjdBgDIAMoAlIHY29yZVBjdBIgCgxmcmVxX21oel9hdmcYBCABKAJS'
     'CmZyZXFNaHpBdmcSIAoMZnJlcV9taHpfbWF4GAUgASgCUgpmcmVxTWh6TWF4EhoKBnRlbXBfYx'
-    'gGIAEoAkgAUgV0ZW1wQ4gBAUIJCgdfdGVtcF9j');
+    'gGIAEoAkgAUgV0ZW1wQ4gBARIZCgh1c2VyX3BjdBgHIAEoAlIHdXNlclBjdBIdCgpzeXN0ZW1f'
+    'cGN0GAggASgCUglzeXN0ZW1QY3QSHQoKaW93YWl0X3BjdBgJIAEoAlIJaW93YWl0UGN0EhkKCG'
+    'NvcmVfbWh6GAogAygCUgdjb3JlTWh6EhoKCWNvcmVfaXNfZRgLIAMoCFIHY29yZUlzRRIjCg10'
+    'YXNrc19ydW5uaW5nGAwgASgNUgx0YXNrc1J1bm5pbmcSHwoLdGFza3NfdG90YWwYDSABKA1SCn'
+    'Rhc2tzVG90YWxCCQoHX3RlbXBfYw==');
 
 @$core.Deprecated('Use memStatsDescriptor instead')
 const MemStats$json = {
@@ -590,6 +601,9 @@ const MemStats$json = {
     {'1': 'available', '3': 3, '4': 1, '5': 4, '10': 'available'},
     {'1': 'swap_total', '3': 4, '4': 1, '5': 4, '10': 'swapTotal'},
     {'1': 'swap_used', '3': 5, '4': 1, '5': 4, '10': 'swapUsed'},
+    {'1': 'cached', '3': 6, '4': 1, '5': 4, '10': 'cached'},
+    {'1': 'buffers', '3': 7, '4': 1, '5': 4, '10': 'buffers'},
+    {'1': 'shared', '3': 8, '4': 1, '5': 4, '10': 'shared'},
   ],
 };
 
@@ -597,7 +611,8 @@ const MemStats$json = {
 final $typed_data.Uint8List memStatsDescriptor = $convert.base64Decode(
     'CghNZW1TdGF0cxIUCgV0b3RhbBgBIAEoBFIFdG90YWwSEgoEdXNlZBgCIAEoBFIEdXNlZBIcCg'
     'lhdmFpbGFibGUYAyABKARSCWF2YWlsYWJsZRIdCgpzd2FwX3RvdGFsGAQgASgEUglzd2FwVG90'
-    'YWwSGwoJc3dhcF91c2VkGAUgASgEUghzd2FwVXNlZA==');
+    'YWwSGwoJc3dhcF91c2VkGAUgASgEUghzd2FwVXNlZBIWCgZjYWNoZWQYBiABKARSBmNhY2hlZB'
+    'IYCgdidWZmZXJzGAcgASgEUgdidWZmZXJzEhYKBnNoYXJlZBgIIAEoBFIGc2hhcmVk');
 
 @$core.Deprecated('Use mountStatsDescriptor instead')
 const MountStats$json = {
@@ -658,6 +673,118 @@ final $typed_data.Uint8List netStatsDescriptor = $convert.base64Decode(
     'MYAyABKAFSBXJ4QnBzEhUKBnR4X2JwcxgEIAEoAVIFdHhCcHMSGQoIcnhfdG90YWwYBSABKARS'
     'B3J4VG90YWwSGQoIdHhfdG90YWwYBiABKARSB3R4VG90YWwSGwoJbGlua19tYnBzGAcgASgFUg'
     'hsaW5rTWJwcw==');
+
+@$core.Deprecated('Use getGpuDetailRequestDescriptor instead')
+const GetGpuDetailRequest$json = {
+  '1': 'GetGpuDetailRequest',
+};
+
+/// Descriptor for `GetGpuDetailRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGpuDetailRequestDescriptor =
+    $convert.base64Decode('ChNHZXRHcHVEZXRhaWxSZXF1ZXN0');
+
+@$core.Deprecated('Use gpuDetailDescriptor instead')
+const GpuDetail$json = {
+  '1': 'GpuDetail',
+  '2': [
+    {'1': 'available', '3': 1, '4': 1, '5': 8, '10': 'available'},
+    {'1': 'error', '3': 2, '4': 1, '5': 9, '10': 'error'},
+    {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'driver', '3': 4, '4': 1, '5': 9, '10': 'driver'},
+    {'1': 'pstate', '3': 5, '4': 1, '5': 9, '10': 'pstate'},
+    {'1': 'util_pct', '3': 6, '4': 1, '5': 2, '10': 'utilPct'},
+    {'1': 'mem_util_pct', '3': 7, '4': 1, '5': 2, '10': 'memUtilPct'},
+    {
+      '1': 'encoder_pct',
+      '3': 8,
+      '4': 1,
+      '5': 2,
+      '9': 0,
+      '10': 'encoderPct',
+      '17': true
+    },
+    {
+      '1': 'decoder_pct',
+      '3': 9,
+      '4': 1,
+      '5': 2,
+      '9': 1,
+      '10': 'decoderPct',
+      '17': true
+    },
+    {'1': 'mem_used', '3': 10, '4': 1, '5': 4, '10': 'memUsed'},
+    {'1': 'mem_total', '3': 11, '4': 1, '5': 4, '10': 'memTotal'},
+    {'1': 'temp_c', '3': 12, '4': 1, '5': 2, '10': 'tempC'},
+    {'1': 'power_w', '3': 13, '4': 1, '5': 2, '10': 'powerW'},
+    {'1': 'power_limit_w', '3': 14, '4': 1, '5': 2, '10': 'powerLimitW'},
+    {'1': 'power_max_w', '3': 15, '4': 1, '5': 2, '10': 'powerMaxW'},
+    {'1': 'clock_mhz', '3': 16, '4': 1, '5': 2, '10': 'clockMhz'},
+    {'1': 'clock_max_mhz', '3': 17, '4': 1, '5': 2, '10': 'clockMaxMhz'},
+    {'1': 'mem_clock_mhz', '3': 18, '4': 1, '5': 2, '10': 'memClockMhz'},
+    {'1': 'mem_clock_max_mhz', '3': 19, '4': 1, '5': 2, '10': 'memClockMaxMhz'},
+    {
+      '1': 'fan_pct',
+      '3': 20,
+      '4': 1,
+      '5': 2,
+      '9': 2,
+      '10': 'fanPct',
+      '17': true
+    },
+    {'1': 'pcie_gen', '3': 21, '4': 1, '5': 13, '10': 'pcieGen'},
+    {'1': 'pcie_gen_max', '3': 22, '4': 1, '5': 13, '10': 'pcieGenMax'},
+    {'1': 'pcie_width', '3': 23, '4': 1, '5': 13, '10': 'pcieWidth'},
+    {'1': 'pcie_width_max', '3': 24, '4': 1, '5': 13, '10': 'pcieWidthMax'},
+    {
+      '1': 'processes',
+      '3': 25,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.GpuProcess',
+      '10': 'processes'
+    },
+  ],
+  '8': [
+    {'1': '_encoder_pct'},
+    {'1': '_decoder_pct'},
+    {'1': '_fan_pct'},
+  ],
+};
+
+/// Descriptor for `GpuDetail`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gpuDetailDescriptor = $convert.base64Decode(
+    'CglHcHVEZXRhaWwSHAoJYXZhaWxhYmxlGAEgASgIUglhdmFpbGFibGUSFAoFZXJyb3IYAiABKA'
+    'lSBWVycm9yEhIKBG5hbWUYAyABKAlSBG5hbWUSFgoGZHJpdmVyGAQgASgJUgZkcml2ZXISFgoG'
+    'cHN0YXRlGAUgASgJUgZwc3RhdGUSGQoIdXRpbF9wY3QYBiABKAJSB3V0aWxQY3QSIAoMbWVtX3'
+    'V0aWxfcGN0GAcgASgCUgptZW1VdGlsUGN0EiQKC2VuY29kZXJfcGN0GAggASgCSABSCmVuY29k'
+    'ZXJQY3SIAQESJAoLZGVjb2Rlcl9wY3QYCSABKAJIAVIKZGVjb2RlclBjdIgBARIZCghtZW1fdX'
+    'NlZBgKIAEoBFIHbWVtVXNlZBIbCgltZW1fdG90YWwYCyABKARSCG1lbVRvdGFsEhUKBnRlbXBf'
+    'YxgMIAEoAlIFdGVtcEMSFwoHcG93ZXJfdxgNIAEoAlIGcG93ZXJXEiIKDXBvd2VyX2xpbWl0X3'
+    'cYDiABKAJSC3Bvd2VyTGltaXRXEh4KC3Bvd2VyX21heF93GA8gASgCUglwb3dlck1heFcSGwoJ'
+    'Y2xvY2tfbWh6GBAgASgCUghjbG9ja01oehIiCg1jbG9ja19tYXhfbWh6GBEgASgCUgtjbG9ja0'
+    '1heE1oehIiCg1tZW1fY2xvY2tfbWh6GBIgASgCUgttZW1DbG9ja01oehIpChFtZW1fY2xvY2tf'
+    'bWF4X21oehgTIAEoAlIObWVtQ2xvY2tNYXhNaHoSHAoHZmFuX3BjdBgUIAEoAkgCUgZmYW5QY3'
+    'SIAQESGQoIcGNpZV9nZW4YFSABKA1SB3BjaWVHZW4SIAoMcGNpZV9nZW5fbWF4GBYgASgNUgpw'
+    'Y2llR2VuTWF4Eh0KCnBjaWVfd2lkdGgYFyABKA1SCXBjaWVXaWR0aBIkCg5wY2llX3dpZHRoX2'
+    '1heBgYIAEoDVIMcGNpZVdpZHRoTWF4EjAKCXByb2Nlc3NlcxgZIAMoCzISLmR5cy52MS5HcHVQ'
+    'cm9jZXNzUglwcm9jZXNzZXNCDgoMX2VuY29kZXJfcGN0Qg4KDF9kZWNvZGVyX3BjdEIKCghfZm'
+    'FuX3BjdA==');
+
+@$core.Deprecated('Use gpuProcessDescriptor instead')
+const GpuProcess$json = {
+  '1': 'GpuProcess',
+  '2': [
+    {'1': 'pid', '3': 1, '4': 1, '5': 13, '10': 'pid'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'kind', '3': 3, '4': 1, '5': 9, '10': 'kind'},
+    {'1': 'mem_used', '3': 4, '4': 1, '5': 4, '10': 'memUsed'},
+  ],
+};
+
+/// Descriptor for `GpuProcess`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gpuProcessDescriptor = $convert.base64Decode(
+    'CgpHcHVQcm9jZXNzEhAKA3BpZBgBIAEoDVIDcGlkEhIKBG5hbWUYAiABKAlSBG5hbWUSEgoEa2'
+    'luZBgDIAEoCVIEa2luZBIZCghtZW1fdXNlZBgEIAEoBFIHbWVtVXNlZA==');
 
 @$core.Deprecated('Use gpuStatsDescriptor instead')
 const GpuStats$json = {

@@ -13,14 +13,16 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use dys_core::pb::{CpuStats, DiskStats, GpuStats, MemStats, MountStats, NetStats, ProcStats, SensorStats, Stats};
+use dys_core::pb::{
+    CpuStats, DiskStats, GpuDetail, GpuProcess, GpuStats, MemStats, MountStats, NetStats, ProcStats, SensorStats, Stats,
+};
 use tokio::sync::{Mutex, watch};
 use tracing::debug;
 
 use crate::actions::runner::{Runner, args};
 use crate::cooling::Cooling;
 
-const TOP_N: usize = 8;
+const TOP_N: usize = 10;
 const GPU_CACHE: Duration = Duration::from_secs(2);
 const REAL_FS: [&str; 9] = ["ext4", "ext3", "btrfs", "xfs", "f2fs", "vfat", "exfat", "ntfs3", "zfs"];
 
@@ -41,6 +43,7 @@ impl Default for Sources {
 struct Prev {
     at: Option<Instant>,
     cpu: Vec<(u64, u64)>,
+    split: CpuSplit,
     net: HashMap<String, (u64, u64)>,
     disk: HashMap<String, (u64, u64)>,
     procs: HashMap<u32, u64>,
@@ -51,6 +54,8 @@ pub struct Sampler {
     runner: Arc<dyn Runner>,
     prev: Prev,
     model: Option<String>,
+    /// Efficiency-core flags per thread (hybrid CPUs), read once.
+    kinds: Option<Vec<bool>>,
     gpu: Option<(Instant, Option<GpuStats>)>,
     page_size: u64,
 }
@@ -59,7 +64,7 @@ impl Sampler {
     pub fn new(src: Sources, runner: Arc<dyn Runner>) -> Self {
         // SAFETY: sysconf has no preconditions.
         let page = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
-        Self { src, runner, prev: Prev::default(), model: None, gpu: None, page_size: if page > 0 { page as u64 } else { 4096 } }
+        Self { src, runner, prev: Prev::default(), model: None, kinds: None, gpu: None, page_size: if page > 0 { page as u64 } else { 4096 } }
     }
 
     fn read(&self, rel: &str) -> String {
@@ -72,7 +77,7 @@ impl Sampler {
         let dt = self.prev.at.map_or(0.0, |t| now.duration_since(t).as_secs_f64());
 
         // CPU
-        let times = parse_cpu_times(&self.read("stat"));
+        let times = parse_cpu_times(&std::fs::read_to_string(self.src.proc.join("stat")).unwrap_or_default());
         let pct = |(t1, i1): (u64, u64), (t0, i0): (u64, u64)| -> f32 {
             let dt = t1.saturating_sub(t0);
             if dt == 0 { 0.0 } else { 100.0 * (dt - i1.saturating_sub(i0).min(dt)) as f32 / dt as f32 }
@@ -86,6 +91,8 @@ impl Sampler {
             (Some(a), Some(b)) => a.0.saturating_sub(b.0),
             _ => 0,
         };
+        let split = parse_cpu_split(&self.read("stat"));
+        let sp = split.pct_since(&self.prev.split);
         let cpuinfo = self.read("cpuinfo");
         if self.model.is_none() {
             self.model = cpuinfo.lines().find_map(|l| l.strip_prefix("model name").and_then(|r| r.split(':').nth(1))).map(|s| s.trim().to_owned());
@@ -97,6 +104,12 @@ impl Sampler {
             .collect();
         let sensors = self.sensors();
         let cpu_temp = cpu_package_temp(&sensors);
+        let threads = usage.len().saturating_sub(1);
+        if self.kinds.is_none() && threads > 0 {
+            self.kinds = Some(efficiency_threads(&self.src.sys, threads));
+        }
+        let loadavg = self.read("loadavg");
+        let (tasks_running, tasks_total) = parse_tasks(&loadavg);
         let cpu = CpuStats {
             model: self.model.clone().unwrap_or_default(),
             usage_pct: usage.first().copied().unwrap_or(0.0),
@@ -104,6 +117,13 @@ impl Sampler {
             freq_mhz_avg: if mhz.is_empty() { 0.0 } else { mhz.iter().sum::<f32>() / mhz.len() as f32 },
             freq_mhz_max: mhz.iter().copied().fold(0.0, f32::max),
             temp_c: cpu_temp,
+            user_pct: sp.0,
+            system_pct: sp.1,
+            iowait_pct: sp.2,
+            core_mhz: mhz.clone(),
+            core_is_e: self.kinds.clone().unwrap_or_default(),
+            tasks_running,
+            tasks_total,
         };
 
         // memory
@@ -115,6 +135,9 @@ impl Sampler {
             used: kb("MemTotal").saturating_sub(kb("MemAvailable")),
             swap_total: kb("SwapTotal"),
             swap_used: kb("SwapTotal").saturating_sub(kb("SwapFree")),
+            cached: kb("Cached") + kb("SReclaimable"),
+            buffers: kb("Buffers"),
+            shared: kb("Shmem"),
         };
 
         // network
@@ -174,12 +197,12 @@ impl Sampler {
             None => None,
         };
 
-        self.prev = Prev { at: Some(now), cpu: times, net: net_prev, disk: disk_prev, procs: proc_prev };
+        self.prev = Prev { at: Some(now), cpu: times, split, net: net_prev, disk: disk_prev, procs: proc_prev };
         Stats {
             unix_ms: SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_millis() as u64),
             hostname: crate::daemon::hostname(),
             uptime_s: self.read("uptime").split_whitespace().next().and_then(|s| s.parse().ok()).unwrap_or(0.0),
-            load_avg: self.read("loadavg").split_whitespace().take(3).filter_map(|s| s.parse().ok()).collect(),
+            load_avg: loadavg.split_whitespace().take(3).filter_map(|s| s.parse().ok()).collect(),
             cpu: Some(cpu),
             mem: Some(mem),
             mounts: self.mounts(),
@@ -363,6 +386,54 @@ pub fn parse_cpu_times(text: &str) -> Vec<(u64, u64)> {
         .collect()
 }
 
+/// Aggregate CPU jiffies split for the user/system/iowait breakdown.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CpuSplit {
+    pub user: u64,   // user + nice
+    pub system: u64, // system + irq + softirq
+    pub iowait: u64,
+    pub total: u64,
+}
+
+impl CpuSplit {
+    /// (user %, system %, iowait %) of all CPU time since `prev` (zeros if no time passed).
+    pub fn pct_since(&self, prev: &CpuSplit) -> (f32, f32, f32) {
+        let dt = self.total.saturating_sub(prev.total);
+        if dt == 0 || prev.total == 0 {
+            return (0.0, 0.0, 0.0);
+        }
+        let p = |a: u64, b: u64| 100.0 * a.saturating_sub(b) as f32 / dt as f32;
+        (p(self.user, prev.user), p(self.system, prev.system), p(self.iowait, prev.iowait))
+    }
+}
+
+/// First line of `/proc/stat`: `cpu user nice system idle iowait irq softirq steal …`.
+pub fn parse_cpu_split(text: &str) -> CpuSplit {
+    let Some(line) = text.lines().find(|l| l.starts_with("cpu ")) else { return CpuSplit::default() };
+    let v: Vec<u64> = line.split_whitespace().skip(1).filter_map(|x| x.parse().ok()).collect();
+    let g = |i: usize| v.get(i).copied().unwrap_or(0);
+    CpuSplit { user: g(0) + g(1), system: g(2) + g(5) + g(6), iowait: g(4), total: v.iter().take(8).sum() }
+}
+
+/// `/proc/loadavg` 4th field "running/total" tasks.
+pub fn parse_tasks(text: &str) -> (u32, u32) {
+    text.split_whitespace()
+        .nth(3)
+        .and_then(|f| f.split_once('/'))
+        .and_then(|(r, t)| Some((r.parse().ok()?, t.parse().ok()?)))
+        .unwrap_or((0, 0))
+}
+
+/// Hybrid Intel: /sys/devices/cpu_atom/cpus lists the E-core threads. Empty if not hybrid.
+pub fn efficiency_threads(sys: &Path, threads: usize) -> Vec<bool> {
+    let Ok(list) = std::fs::read_to_string(sys.join("devices/cpu_atom/cpus")) else { return Vec::new() };
+    let e = crate::actions::info::parse_cpu_list(&list);
+    if e.is_empty() {
+        return Vec::new();
+    }
+    (0..threads).map(|i| u32::try_from(i).is_ok_and(|i| e.contains(&i))).collect()
+}
+
 /// `/proc/meminfo` → key → kB.
 pub fn parse_meminfo(text: &str) -> HashMap<String, u64> {
     text.lines()
@@ -540,9 +611,207 @@ impl StatsHub {
     }
 }
 
+/// Fields for [`gpu_detail`], in order. Separate from the stats query so a field an older driver
+/// doesn't know can only break the detail page.
+pub const GPU_DETAIL_QUERY: &str = "--query-gpu=name,driver_version,pstate,utilization.gpu,utilization.memory,\
+utilization.encoder,utilization.decoder,memory.used,memory.total,temperature.gpu,power.draw,power.limit,\
+power.max_limit,clocks.gr,clocks.max.gr,clocks.mem,clocks.max.mem,fan.speed,pcie.link.gen.current,\
+pcie.link.gen.max,pcie.link.width.current,pcie.link.width.max";
+
+/// One CSV line of [`GPU_DETAIL_QUERY`].
+pub fn parse_gpu_detail(text: &str) -> Option<GpuDetail> {
+    let line = text.lines().find(|l| !l.trim().is_empty())?;
+    let f: Vec<&str> = line.split(',').map(str::trim).collect();
+    if f.len() < 22 {
+        return None;
+    }
+    let num = |i: usize| f.get(i).and_then(|s| s.parse::<f32>().ok());
+    let int = |i: usize| f.get(i).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
+    let mib = |i: usize| (num(i).unwrap_or(0.0) as u64) * 1024 * 1024;
+    Some(GpuDetail {
+        available: true,
+        error: String::new(),
+        name: f[0].to_owned(),
+        driver: f[1].to_owned(),
+        pstate: f[2].to_owned(),
+        util_pct: num(3).unwrap_or(0.0),
+        mem_util_pct: num(4).unwrap_or(0.0),
+        encoder_pct: num(5),
+        decoder_pct: num(6),
+        mem_used: mib(7),
+        mem_total: mib(8),
+        temp_c: num(9).unwrap_or(0.0),
+        power_w: num(10).unwrap_or(0.0),
+        power_limit_w: num(11).unwrap_or(0.0),
+        power_max_w: num(12).unwrap_or(0.0),
+        clock_mhz: num(13).unwrap_or(0.0),
+        clock_max_mhz: num(14).unwrap_or(0.0),
+        mem_clock_mhz: num(15).unwrap_or(0.0),
+        mem_clock_max_mhz: num(16).unwrap_or(0.0),
+        fan_pct: num(17),
+        pcie_gen: int(18),
+        pcie_gen_max: int(19),
+        pcie_width: int(20),
+        pcie_width_max: int(21),
+        processes: Vec::new(),
+    })
+}
+
+/// `nvidia-smi -q -d PIDS` (the Processes section: graphics and compute):
+/// ```text
+///         Process ID                        : 1234
+///             Type                          : G
+///             Name                          : /usr/bin/kwin_wayland
+///             Used GPU Memory               : 45 MiB
+/// ```
+pub fn parse_gpu_processes(text: &str) -> Vec<GpuProcess> {
+    let mut out: Vec<GpuProcess> = Vec::new();
+    for line in text.lines() {
+        let Some((k, v)) = line.split_once(':') else { continue };
+        let (k, v) = (k.trim(), v.trim());
+        match k {
+            "Process ID" => {
+                if let Ok(pid) = v.parse() {
+                    out.push(GpuProcess { pid, ..Default::default() });
+                }
+            }
+            "Type" => {
+                if let Some(p) = out.last_mut() {
+                    p.kind = v.to_owned();
+                }
+            }
+            "Name" => {
+                if let Some(p) = out.last_mut() {
+                    p.name = v.to_owned();
+                }
+            }
+            "Used GPU Memory" => {
+                if let Some(p) = out.last_mut() {
+                    let n: Option<u64> = v.split_whitespace().next().and_then(|x| x.parse().ok());
+                    p.mem_used = n.map_or(0, |m| if v.ends_with("GiB") { m << 30 } else { m << 20 });
+                }
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
+/// GPU details + processes. nvidia-smi failures come back in `error`, never as an RPC error.
+pub async fn gpu_detail(runner: &dyn Runner, proc_dir: &Path) -> GpuDetail {
+    let t = Duration::from_secs(8);
+    let (qa, pa) = (args(&[GPU_DETAIL_QUERY, "--format=csv,noheader,nounits"]), args(&["-q", "-d", "PIDS"]));
+    let (q, p) = tokio::join!(runner.run("nvidia-smi", &qa, t), runner.run("nvidia-smi", &pa, t));
+    let mut d = match q {
+        Ok(o) if o.ok() => match parse_gpu_detail(&o.stdout) {
+            Some(d) => d,
+            None => return GpuDetail { error: format!("unexpected nvidia-smi output: {}", o.stdout.trim()), ..Default::default() },
+        },
+        Ok(o) => return GpuDetail { error: format!("nvidia-smi: {}", o.error_text_or_stdout()), ..Default::default() },
+        Err(e) => return GpuDetail { error: format!("nvidia-smi: {e:#}"), ..Default::default() },
+    };
+    match p {
+        Ok(o) if o.ok() => {
+            let mut procs = parse_gpu_processes(&o.stdout);
+            for pr in &mut procs {
+                // Names come as full paths, or not at all for processes nvidia-smi can't inspect.
+                let base = pr.name.rsplit('/').next().unwrap_or("").to_owned();
+                pr.name = if base.is_empty() || base.starts_with('[') {
+                    std::fs::read_to_string(proc_dir.join(pr.pid.to_string()).join("comm"))
+                        .map_or_else(|_| format!("pid {}", pr.pid), |s| s.trim().to_owned())
+                } else {
+                    base
+                };
+            }
+            procs.sort_by_key(|p| std::cmp::Reverse(p.mem_used));
+            d.processes = procs;
+        }
+        Ok(o) => d.error = format!("process list: {}", o.error_text_or_stdout()),
+        Err(e) => d.error = format!("process list: {e:#}"),
+    }
+    d
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cpu_split_tasks_and_kinds() {
+        let a = parse_cpu_split("cpu  100 0 50 800 10 5 5 0 0 0\ncpu0 1 2 3\n");
+        let b = parse_cpu_split("cpu  150 10 70 890 30 5 15 0 0 0\n");
+        assert_eq!(a, CpuSplit { user: 100, system: 60, iowait: 10, total: 970 });
+        // deltas: user 60, system 30, iowait 20 of 200
+        assert_eq!(b.pct_since(&a), (30.0, 15.0, 10.0));
+        assert_eq!(a.pct_since(&CpuSplit::default()), (0.0, 0.0, 0.0), "first sample");
+        assert_eq!(parse_tasks("0.50 0.40 0.30 3/1234 99\n"), (3, 1234));
+        assert_eq!(parse_tasks(""), (0, 0));
+
+        let dir = tempfile::tempdir().unwrap();
+        assert!(efficiency_threads(dir.path(), 4).is_empty(), "not hybrid");
+        std::fs::create_dir_all(dir.path().join("devices/cpu_atom")).unwrap();
+        std::fs::write(dir.path().join("devices/cpu_atom/cpus"), "2-3\n").unwrap();
+        assert_eq!(efficiency_threads(dir.path(), 4), [false, false, true, true]);
+    }
+
+    #[test]
+    fn gpu_detail_and_process_parsing() {
+        let d = parse_gpu_detail(
+            "NVIDIA GeForce RTX 4070 Ti SUPER, 615.71.09, P8, 3, 1, 0, 0, 1024, 16376, 34, 11.52, 285.00, 320.00, 210, 3105, 405, 10501, 0, 1, 4, 16, 16\n",
+        )
+        .unwrap();
+        assert_eq!((d.pstate.as_str(), d.mem_used, d.pcie_gen, d.pcie_gen_max, d.pcie_width), ("P8", 1 << 30, 1, 4, 16));
+        assert_eq!((d.clock_max_mhz, d.mem_clock_max_mhz, d.power_max_w), (3105.0, 10501.0, 320.0));
+        assert_eq!((d.encoder_pct, d.fan_pct), (Some(0.0), Some(0.0)));
+        let na = parse_gpu_detail("RTX, 615, P0, 50, 20, [N/A], [N/A], 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, [N/A], 4, 4, 16, 16").unwrap();
+        assert_eq!((na.encoder_pct, na.fan_pct), (None, None));
+        assert!(parse_gpu_detail("too, short").is_none());
+
+        let pids = "==============NVSMI LOG==============\n\nAttached GPUs : 1\nGPU 00000000:01:00.0\n    Processes\n\
+                    \x20       GPU instance ID                   : N/A\n\
+                    \x20       Process ID                        : 1834\n\
+                    \x20           Type                          : G\n\
+                    \x20           Name                          : /usr/bin/kwin_wayland\n\
+                    \x20           Used GPU Memory               : 312 MiB\n\
+                    \x20       Process ID                        : 5521\n\
+                    \x20           Type                          : C+G\n\
+                    \x20           Name                          : /home/vldg/.steam/game.exe\n\
+                    \x20           Used GPU Memory               : 7 GiB\n";
+        let p = parse_gpu_processes(pids);
+        assert_eq!(p.len(), 2);
+        assert_eq!((p[0].pid, p[0].kind.as_str(), p[0].name.as_str(), p[0].mem_used), (1834, "G", "/usr/bin/kwin_wayland", 312 << 20));
+        assert_eq!((p[1].kind.as_str(), p[1].mem_used), ("C+G", 7 << 30));
+        assert!(parse_gpu_processes("Processes : None\n").is_empty());
+    }
+
+    #[tokio::test]
+    async fn gpu_detail_names_sorting_and_errors() {
+        use crate::actions::runner::fake::{FakeRunner, out};
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("77")).unwrap();
+        std::fs::write(dir.path().join("77/comm"), "Xwayland\n").unwrap();
+        let f = FakeRunner::default();
+        f.on("nvidia-smi --query-gpu", out(0, "RTX, 615, P2, 40, 10, 0, 0, 2048, 16376, 50, 120, 285, 320, 2600, 3105, 10501, 10501, 30, 4, 4, 16, 16\n", ""));
+        f.on("nvidia-smi -q -d PIDS", out(0, "Process ID : 10\nType : G\nName : /usr/bin/kwin_wayland\nUsed GPU Memory : 300 MiB\n\
+            Process ID : 77\nType : G\nName : [Not Found]\nUsed GPU Memory : 900 MiB\n", ""));
+        let d = gpu_detail(&f, dir.path()).await;
+        assert!(d.available && d.error.is_empty(), "{}", d.error);
+        assert_eq!(d.processes.iter().map(|p| p.name.as_str()).collect::<Vec<_>>(), ["Xwayland", "kwin_wayland"]);
+
+        let f = FakeRunner::default();
+        f.on("nvidia-smi --query-gpu", out(2, "Field \"clocks.max.mem\" is not a valid field to query.\n", ""));
+        f.on("nvidia-smi -q -d PIDS", out(0, "", ""));
+        let d = gpu_detail(&f, dir.path()).await;
+        assert!(!d.available);
+        assert_eq!(d.error, "nvidia-smi: Field \"clocks.max.mem\" is not a valid field to query.");
+
+        let f = FakeRunner::default();
+        f.on("nvidia-smi --query-gpu", out(0, "RTX, 615, P2, 40, 10, 0, 0, 2048, 16376, 50, 120, 285, 320, 2600, 3105, 10501, 10501, 30, 4, 4, 16, 16\n", ""));
+        f.on("nvidia-smi -q -d PIDS", out(4, "", "Insufficient Permissions"));
+        let d = gpu_detail(&f, dir.path()).await;
+        assert!(d.available, "details still shown");
+        assert_eq!(d.error, "process list: Insufficient Permissions");
+    }
 
     #[test]
     fn cpu_times_and_usage_math() {

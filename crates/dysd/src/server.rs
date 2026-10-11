@@ -19,7 +19,7 @@ use dys_core::pb::power_request::Action as PowerAction;
 use dys_core::pb::{
     AlertStatus, ApplyProfileReply, ApplyProfileRequest, ApplyUpdatesRequest, CheckUpdatesRequest, Cooling,
     DeleteProfileRequest, GetAlertsRequest, GetCoolingRequest, GetGpuRequest, GetInfoRequest, GetMinecraftRequest,
-    GetStatsRequest, PowerReply, PowerRequest, SystemInfo,
+    GetGpuDetailRequest, GetStatsRequest, GpuDetail, PowerReply, PowerRequest, SystemInfo,
     GetUpdateStatusRequest, GpuInfo, ListProfilesRequest, ListRgbDevicesRequest, MinecraftActionRequest,
     MinecraftStatus, PingReply, PingRequest, ProfileList, RebootToWindowsReply, RebootToWindowsRequest, RgbDevice,
     RgbDeviceList, SaveProfileRequest, SendTestAlertRequest, SetFanModeRequest, SetGpuPowerLimitRequest,
@@ -261,6 +261,10 @@ impl System for SystemSvc {
         info!(by = %who(&req), op = op.noun(), lan = from_lan(&req), "Power");
         let delay = self.actions.power(op, r.confirm).await?;
         Ok(Response::new(PowerReply { delay_ms: u32::try_from(delay.as_millis()).unwrap_or(u32::MAX) }))
+    }
+
+    async fn get_gpu_detail(&self, _req: Request<GetGpuDetailRequest>) -> Result<Response<GpuDetail>, Status> {
+        Ok(Response::new(self.actions.gpu_detail().await))
     }
 
     async fn get_info(&self, req: Request<GetInfoRequest>) -> Result<Response<SystemInfo>, Status> {

@@ -39,7 +39,7 @@ fn fake_tree(root: &Path, k: u64) {
     let proc = root.join("proc");
     let busy = 100 * k; // cpu0 busy jiffies grow by 100 per step, idle by 300 → 25 % usage
     w(&proc, "stat", &format!("cpu  {b} 0 0 {i} 0 0 0 0 0 0\ncpu0 {b} 0 0 {i} 0 0 0 0 0 0\n", b = busy, i = 300 * k));
-    w(&proc, "meminfo", "MemTotal: 1000 kB\nMemAvailable: 250 kB\nSwapTotal: 100 kB\nSwapFree: 100 kB\n");
+    w(&proc, "meminfo", "MemTotal: 1000 kB\nMemAvailable: 250 kB\nBuffers: 10 kB\nCached: 300 kB\nSReclaimable: 20 kB\nShmem: 5 kB\nSwapTotal: 100 kB\nSwapFree: 100 kB\n");
     w(&proc, "net/dev", &format!("h1\nh2\n    lo: 5 0 0 0 0 0 0 0 5 0\nenp4s0: {rx} 0 0 0 0 0 0 0 {tx} 0\n  wlan9: 0 0 0 0 0 0 0 0 0 0\n", rx = 1_000_000 * k, tx = 10_000 * k));
     w(&proc, "diskstats", &format!(" 259 0 nvme0n1 1 0 {r} 0 1 0 {wr} 0 0 0 0\n 259 1 nvme0n1p1 1 0 5 0 1 0 5 0 0 0 0\n", r = 2048 * k, wr = 4096 * k));
     w(&proc, "uptime", "3725.5 1000.0\n");
@@ -93,9 +93,14 @@ async fn sample_computes_rates_and_reads_everything() {
     assert_eq!(cpu.core_pct.len(), 1);
     assert_eq!((cpu.freq_mhz_avg, cpu.freq_mhz_max), (4500.0, 5600.0));
     assert_eq!(cpu.temp_c, Some(52.0));
+    assert!((cpu.user_pct - 25.0).abs() < 0.01 && cpu.system_pct == 0.0 && cpu.iowait_pct == 0.0, "{cpu:?}");
+    assert_eq!(cpu.core_mhz, [3400.0, 5600.0]);
+    assert!(cpu.core_is_e.is_empty(), "not hybrid");
+    assert_eq!((cpu.tasks_running, cpu.tasks_total), (1, 500));
 
     let mem = st.mem.unwrap();
     assert_eq!((mem.total, mem.used, mem.swap_used), (1_024_000, 768_000, 0));
+    assert_eq!((mem.cached, mem.buffers, mem.shared), (320 * 1024, 10 * 1024, 5 * 1024));
 
     assert_eq!(st.nets.len(), 1, "lo and the down, idle wlan9 are left out");
     let n = &st.nets[0];

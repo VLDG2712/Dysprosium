@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:dys_client/dys_client.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:dysprosium/widgets/gpu_card.dart';
 import 'package:dysprosium/widgets/rgb_card.dart';
 import 'package:dysprosium/widgets/updates_card.dart';
@@ -39,6 +40,34 @@ class FakeClient extends DysClient {
   @override
   Future<void> rebootToWindows() async {
     calls.add('windows');
+  }
+
+  int gpuDetailCalls = 0;
+  GpuDetail gpuDetail = GpuDetail(
+    available: true,
+    name: 'RTX',
+    driver: '615.71.09',
+    pstate: 'P8',
+    utilPct: 3,
+    memUtilPct: 1,
+    encoderPct: 0,
+    decoderPct: 0,
+    clockMhz: 210,
+    clockMaxMhz: 3105,
+    memClockMhz: 405,
+    memClockMaxMhz: 10501,
+    powerMaxW: 320,
+    pcieGen: 1,
+    pcieGenMax: 4,
+    pcieWidth: 16,
+    pcieWidthMax: 16,
+    processes: [GpuProcess(pid: 5521, name: 'game.exe', kind: 'C+G', memUsed: Int64(7 << 30))],
+  );
+  @override
+  Future<GpuDetail> getGpuDetail() async {
+    gpuDetailCalls++;
+    calls.add('gpu detail');
+    return gpuDetail;
   }
 
   int infoCalls = 0;

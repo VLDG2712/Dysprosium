@@ -141,6 +141,15 @@ class SystemClient extends $grpc.Client {
         options: options);
   }
 
+  /// Everything nvidia-smi knows about the GPU (clocks, PCIe, encoder, ...) plus the processes using
+  /// it. Separate from the stats stream: one extra nvidia-smi call, only while the phone asks.
+  $grpc.ResponseFuture<$0.GpuDetail> getGpuDetail(
+    $0.GetGpuDetailRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getGpuDetail, request, options: options);
+  }
+
   /// Pump/fan through nzxt-ctl's socket. Reading needs nothing; SetFanMode needs nzxt-ctl with the
   /// SetMode request and `[cooling] allow_mode_changes = true` in /etc/dysd/dysd.toml.
   $grpc.ResponseFuture<$0.Cooling> getCooling(
@@ -301,6 +310,11 @@ class SystemClient extends $grpc.Client {
           '/dys.v1.System/WatchStats',
           ($0.WatchStatsRequest value) => value.writeToBuffer(),
           $0.Stats.fromBuffer);
+  static final _$getGpuDetail =
+      $grpc.ClientMethod<$0.GetGpuDetailRequest, $0.GpuDetail>(
+          '/dys.v1.System/GetGpuDetail',
+          ($0.GetGpuDetailRequest value) => value.writeToBuffer(),
+          $0.GpuDetail.fromBuffer);
   static final _$getCooling =
       $grpc.ClientMethod<$0.GetCoolingRequest, $0.Cooling>(
           '/dys.v1.System/GetCooling',
@@ -466,6 +480,14 @@ abstract class SystemServiceBase extends $grpc.Service {
         true,
         ($core.List<$core.int> value) => $0.WatchStatsRequest.fromBuffer(value),
         ($0.Stats value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetGpuDetailRequest, $0.GpuDetail>(
+        'GetGpuDetail',
+        getGpuDetail_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.GetGpuDetailRequest.fromBuffer(value),
+        ($0.GpuDetail value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.GetCoolingRequest, $0.Cooling>(
         'GetCooling',
         getCooling_Pre,
@@ -665,6 +687,14 @@ abstract class SystemServiceBase extends $grpc.Service {
 
   $async.Stream<$0.Stats> watchStats(
       $grpc.ServiceCall call, $0.WatchStatsRequest request);
+
+  $async.Future<$0.GpuDetail> getGpuDetail_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.GetGpuDetailRequest> $request) async {
+    return getGpuDetail($call, await $request);
+  }
+
+  $async.Future<$0.GpuDetail> getGpuDetail(
+      $grpc.ServiceCall call, $0.GetGpuDetailRequest request);
 
   $async.Future<$0.Cooling> getCooling_Pre($grpc.ServiceCall $call,
       $async.Future<$0.GetCoolingRequest> $request) async {

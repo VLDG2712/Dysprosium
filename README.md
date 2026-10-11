@@ -185,6 +185,23 @@ set P -import-path proto -proto dys/v1/dys.proto
 grpcurl -cacert dev-client/ca.pem -cert dev-client/client.pem -key dev-client/client.key $P localhost:50051 dys.v1.System/Ping
 ```
 
+## Requirements (Arch)
+
+| For | Packages |
+|---|---|
+| Building dysd / dys | `rust` (or rustup, ≥ 1.88), `protobuf` (protoc) |
+| GPU power limit + stats | `nvidia-utils` (nvidia-smi) |
+| Update check / apply | `pacman-contrib` (checkupdates); `yay` optional (AUR check only) |
+| Reboot to Windows | `efibootmgr` |
+| Root actions, power | `polkit`, systemd (logind) |
+| Lighting (optional) | `openrgb` running as a service on 127.0.0.1:6742 |
+| Cooling (optional) | `nzxt-ctl` (AUR `nzxt-ctl-git`); fan mode switching needs its SetMode request |
+| Phone app | Flutter SDK + Android SDK, a phone with USB or wireless debugging |
+
+```fish
+sudo pacman -S --needed rust protobuf nvidia-utils pacman-contrib efibootmgr polkit
+```
+
 ## Install as a service
 
 ```fish
@@ -205,11 +222,33 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now dysd    # first start creates CA + server cert
 sudo -u dysd dysd --state-dir /var/lib/dysd init --san <lan-ip> --san <tailscale-ip> --san <magicdns-name>
 sudo systemctl restart dysd
-dys ping
+sudo dys ping                       # plain `dys ping` works after logging out/in (group dys)
 ```
 
 polkit picks up the rule file without a restart. Open ports 50051 (and 50052 while pairing) for
 LAN/tailnet only if a firewall is active.
+
+Then pair the phone: `dys pair`, scan the QR code with the app.
+
+## Uninstall
+
+Removes everything the install block created. The state directory holds the CA, the server cert,
+the paired phones, the saved GPU limit, lighting and profiles: after this every phone must pair
+again. Back up `/etc/dysd/dysd.toml` first if you want to keep the RCON password / ntfy token.
+
+```fish
+sudo systemctl disable --now dysd
+sudo rm -f /usr/bin/dysd /usr/bin/dys
+sudo rm -f /usr/lib/systemd/system/{dysd.service,dysd-gpu-limit@.service,dysd-reboot-windows.service,dysd-update.service}
+sudo rm -rf /usr/lib/dysd
+sudo rm -f /usr/share/polkit-1/rules.d/50-dysd.rules /usr/lib/sysusers.d/dysd.conf /usr/lib/tmpfiles.d/dysd.conf
+sudo systemctl daemon-reload
+sudo cp /etc/dysd/dysd.toml ~/dysd.toml.bak   # optional
+sudo rm -rf /var/lib/dysd /var/log/dysd /etc/dysd
+sudo userdel dysd; sudo groupdel dys
+```
+On the phone: uninstall the app (removes its key, layout, theme and Home Assistant settings).
+The GPU power limit stays at its last value until the next reboot; lighting keeps its last frame.
 
 ## License
 
