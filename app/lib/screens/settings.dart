@@ -1,13 +1,28 @@
 import 'package:flutter/material.dart';
 
+import '../donate.dart';
 import '../theme.dart';
 
-/// App settings: theme (mode, accent, pure black) and the layout editor.
+/// App settings: theme (mode, accent, pure black), the layout editor, optional donation links.
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key, required this.theme, required this.onEditLayout});
+  const SettingsScreen({
+    super.key,
+    required this.theme,
+    required this.onEditLayout,
+    this.donations = donationsEnabled,
+    this.donationLinks,
+    this.open = openExternally,
+  });
 
   final ThemeController theme;
   final VoidCallback onEditLayout;
+
+  /// Build-time switch (--dart-define=DONATIONS=false hides the section).
+  final bool donations;
+
+  /// Defaults to [donationLinks()] from donate.dart (tests pass their own).
+  final List<DonationLink>? donationLinks;
+  final UrlOpener open;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +95,10 @@ class SettingsScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Text('Saved on this phone only.', style: t.textTheme.bodySmall),
             ),
+            if (donations) ...[
+              const Divider(),
+              SupportSection(links: donationLinks ?? defaultDonationLinks(), open: open),
+            ],
           ]);
         },
       ),

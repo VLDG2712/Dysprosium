@@ -250,6 +250,16 @@ sudo userdel dysd; sudo groupdel dys
 On the phone: uninstall the app (removes its key, layout, theme and Home Assistant settings).
 The GPU power limit stays at its last value until the next reboot; lighting keeps its last frame.
 
+## Support
+
+Dysprosium is free and open source, with no ads and no tracking. If it is useful to you, you can
+support it via [GitHub Sponsors](https://github.com/sponsors/VLDG2712). The app has the same links
+in Settings → Support Dysprosium: optional, no reminders, nothing locked behind them.
+
+Build switches (app): `--dart-define=PAYPAL_ME=<handle>` adds a PayPal button;
+`--dart-define=DONATIONS=false` removes the section entirely, e.g. for a Google Play build (Play
+only allows donation links to validated charities).
+
 ## License
 
 Licensed under either of [Apache License 2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT) at your option.
