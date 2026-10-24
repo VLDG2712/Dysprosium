@@ -63,8 +63,12 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           v="${GITHUB_REF_NAME#v}"
-          useradd -m builder
           cd packaging/arch
+          # makepkg (without -s, it can't install as the builder user) refuses to build until the
+          # runtime depends are installed too, so take both lists straight from the PKGBUILD.
+          # shellcheck disable=SC1091,SC2154
+          (source ./PKGBUILD && pacman -S --noconfirm --needed "${depends[@]}" "${makedepends[@]}")
+          useradd -m builder
           sed -i "s/^pkgver=.*/pkgver=$v/" PKGBUILD
           # Same name/prefix as GitHub's tag tarball, so makepkg uses it instead of downloading.
           git -C "$GITHUB_WORKSPACE" archive --prefix="Dysprosium-$v/" -o "$PWD/dysprosium-$v.tar.gz" HEAD
