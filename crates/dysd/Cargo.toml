@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+description = "Dysprosium daemon: control a Linux PC from the phone app (and the dys CLI)"
 
 [lib]
 path = "src/lib.rs"
@@ -38,3 +39,69 @@ tempfile = "3"
 rcgen.workspace = true
 hyper-util = { version = "0.1.21", features = ["tokio"] }
 tower = { version = "0.5.3", features = ["util"] }
+
+# ---- distribution packages (built in CI: .github/workflows/release.yml) ---------------------------
+# Paths are relative to this crate; "target/release/…" is resolved to the workspace target dir.
+
+[package.metadata.deb]
+name = "dysprosium"
+maintainer = "VLDG2712 <ddutu10@gmail.com>"
+copyright = "VLDG2712"
+license-file = ["../../LICENSE-MIT", "0"]
+extended-description = """\
+dysd controls a Linux PC from the Dysprosium phone app over mutual TLS (QR pairing): \
+stats, GPU power limit, lighting (OpenRGB), cooling (nzxt-ctl), updates, power, \
+Minecraft server, alerts. dys is the local CLI."""
+section = "admin"
+priority = "optional"
+depends = "$auto, systemd, polkitd"
+recommends = "efibootmgr"
+suggests = "openrgb"
+maintainer-scripts = "../../packaging/deb"
+assets = [
+    ["target/release/dysd", "usr/bin/", "755"],
+    ["target/release/dys", "usr/bin/", "755"],
+    ["../../packaging/dysd.service", "usr/lib/systemd/system/", "644"],
+    ["../../packaging/dysd-gpu-limit@.service", "usr/lib/systemd/system/", "644"],
+    ["../../packaging/dysd-reboot-windows.service", "usr/lib/systemd/system/", "644"],
+    ["../../packaging/dysd-update.service", "usr/lib/systemd/system/", "644"],
+    ["../../packaging/libexec/reboot-to-windows", "usr/lib/dysd/", "755"],
+    ["../../packaging/libexec/record-update-result", "usr/lib/dysd/", "755"],
+    ["../../packaging/libexec/apply-updates", "usr/lib/dysd/", "755"],
+    ["../../packaging/dysd.sysusers", "usr/lib/sysusers.d/dysd.conf", "644"],
+    ["../../packaging/dysd.tmpfiles", "usr/lib/tmpfiles.d/dysd.conf", "644"],
+    ["../../packaging/50-dysd.rules", "usr/share/polkit-1/rules.d/", "644"],
+    ["../../packaging/dysd.toml.example", "usr/share/doc/dysprosium/", "644"],
+    ["../../README.md", "usr/share/doc/dysprosium/", "644"],
+]
+
+[package.metadata.generate-rpm]
+name = "dysprosium"
+summary = "Control your Linux PC from your phone (daemon dysd + CLI dys)"
+license = "MIT OR Apache-2.0"
+post_install_script = "../../packaging/rpm/post_install.sh"
+pre_uninstall_script = "../../packaging/rpm/pre_uninstall.sh"
+post_uninstall_script = "../../packaging/rpm/post_uninstall.sh"
+assets = [
+    { source = "target/release/dysd", dest = "/usr/bin/dysd", mode = "755" },
+    { source = "target/release/dys", dest = "/usr/bin/dys", mode = "755" },
+    { source = "../../packaging/dysd.service", dest = "/usr/lib/systemd/system/dysd.service", mode = "644" },
+    { source = "../../packaging/dysd-gpu-limit@.service", dest = "/usr/lib/systemd/system/dysd-gpu-limit@.service", mode = "644" },
+    { source = "../../packaging/dysd-reboot-windows.service", dest = "/usr/lib/systemd/system/dysd-reboot-windows.service", mode = "644" },
+    { source = "../../packaging/dysd-update.service", dest = "/usr/lib/systemd/system/dysd-update.service", mode = "644" },
+    { source = "../../packaging/libexec/reboot-to-windows", dest = "/usr/lib/dysd/reboot-to-windows", mode = "755" },
+    { source = "../../packaging/libexec/record-update-result", dest = "/usr/lib/dysd/record-update-result", mode = "755" },
+    { source = "../../packaging/libexec/apply-updates", dest = "/usr/lib/dysd/apply-updates", mode = "755" },
+    { source = "../../packaging/dysd.sysusers", dest = "/usr/lib/sysusers.d/dysd.conf", mode = "644" },
+    { source = "../../packaging/dysd.tmpfiles", dest = "/usr/lib/tmpfiles.d/dysd.conf", mode = "644" },
+    { source = "../../packaging/50-dysd.rules", dest = "/usr/share/polkit-1/rules.d/50-dysd.rules", mode = "644" },
+    { source = "../../packaging/dysd.toml.example", dest = "/usr/share/doc/dysprosium/dysd.toml.example", mode = "644", doc = true },
+    { source = "../../README.md", dest = "/usr/share/doc/dysprosium/README.md", mode = "644", doc = true },
+]
+
+[package.metadata.generate-rpm.requires]
+systemd = "*"
+polkit = "*"
+
+[package.metadata.generate-rpm.recommends]
+efibootmgr = "*"

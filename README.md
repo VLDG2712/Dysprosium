@@ -47,7 +47,7 @@ Reboot / shutdown / sleep go to logind directly; the same rules file grants user
 |---|---|---|
 | GPU power limit | `dysd-gpu-limit@<W>.service` → `nvidia-smi --power-limit=<W>` | dysd reads limits with `nvidia-smi` and checks the range; the rule also only accepts 50–600. The set value is saved in `gpu.json` and reapplied when dysd starts. |
 | Reboot to Windows | `dysd-reboot-windows.service` → `/usr/lib/dysd/reboot-to-windows` | Finds the "Windows Boot Manager" entry by label, sets BootNext, checks it stuck, reboots. Phone always asks first. |
-| Apply updates | `dysd-update.service` → `pacman -Syu --noconfirm` | Repo packages only. Refused unless the caller is on the LAN (or the admin socket). Output in `/var/log/dysd/update.log`, result in `update.status`. |
+| Apply updates | `dysd-update.service` → `/usr/lib/dysd/apply-updates` (`pacman -Syu` / `apt-get full-upgrade` / `dnf upgrade`) | Repo packages only. Refused unless the caller is on the LAN (or the admin socket). Output in `/var/log/dysd/update.log`, result in `update.status`. |
 | Check updates | (none, runs as dysd) | `checkupdates` + `yay -Qua`, cached 10 min. |
 | Reboot / shut down / sleep | (none: logind `Reboot`/`PowerOff`/`Suspend` via `busctl`) | dysd asks logind first (`CanReboot` etc.): polkit missing, unsupported, or an app holding a block inhibitor (named in the error) refuse it before anything happens. Then it replies and acts 1.5 s later. Allowed away from home; the phone warns that waking it again needs Home Assistant over Tailscale, and about Minecraft players online. |
 
@@ -185,24 +185,73 @@ set P -import-path proto -proto dys/v1/dys.proto
 grpcurl -cacert dev-client/ca.pem -cert dev-client/client.pem -key dev-client/client.key $P localhost:50051 dys.v1.System/Ping
 ```
 
-## Requirements (Arch)
+## Supported systems
 
-| For | Packages |
-|---|---|
-| Building dysd / dys | `rust` (or rustup, ≥ 1.88), `protobuf` (protoc) |
-| GPU power limit + stats | `nvidia-utils` (nvidia-smi) |
-| Update check / apply | `pacman-contrib` (checkupdates); `yay` optional (AUR check only) |
-| Reboot to Windows | `efibootmgr` |
-| Root actions, power | `polkit`, systemd (logind) |
-| Lighting (optional) | `openrgb` running as a service on 127.0.0.1:6742 |
-| Cooling (optional) | `nzxt-ctl` (AUR `nzxt-ctl-git`); fan mode switching needs its SetMode request |
-| Phone app | Flutter SDK + Android SDK, a phone with USB or wireless debugging |
+| Family | Versions | Updates via | Package |
+|---|---|---|---|
+| Arch (+ EndeavourOS, CachyOS, Manjaro) | rolling | pacman + `checkupdates`, AUR check via yay | `.pkg.tar.zst` / `packaging/arch/PKGBUILD` |
+| Debian, Ubuntu (+ Mint, Pop!_OS) | Debian 12+, Ubuntu 24.04+ | apt (`full-upgrade`) | `.deb` |
+| Fedora (+ Nobara) | 41+ (dnf5) | dnf | `.rpm` |
 
-```fish
-sudo pacman -S --needed rust protobuf nvidia-utils pacman-contrib efibootmgr polkit
+Ubuntu 22.04 is not supported (its polkit 0.105 only reads the old `.pkla` format, not
+`50-dysd.rules`). The distro is detected from `/etc/os-release` (`ID`, `ID_LIKE`); dysd logs it at
+start ("distribution detected"). On Debian/Ubuntu the update check reads apt's package lists as
+`apt-daily.timer` last refreshed them (refreshing needs root); the app shows their age. Applying
+updates runs `apt-get update` + `apt-get full-upgrade` (changed config files are kept).
+
+Runtime pieces per feature (all optional except systemd/polkit):
+
+| Feature | Arch | Debian / Ubuntu | Fedora |
+|---|---|---|---|
+| Root actions, power | `polkit` | `polkitd` | `polkit` |
+| Update check | `pacman-contrib`; `yay` for AUR | (apt) | (dnf) |
+| GPU stats + power limit | `nvidia-utils` | NVIDIA driver package (provides `nvidia-smi`) | NVIDIA driver (RPM Fusion) |
+| Reboot to Windows | `efibootmgr` | `efibootmgr` | `efibootmgr` |
+| Lighting | `openrgb` as a system service on 127.0.0.1:6742 | same (a Flatpak OpenRGB can't run as a system service) | same |
+| Cooling | `nzxt-ctl-git` (AUR) | build nzxt-ctl from source | build nzxt-ctl from source |
+
+## Install
+
+### From a release (recommended)
+
+Download from GitHub Releases:
+
+```sh
+sudo apt install ./dysprosium_<version>-1_amd64.deb          # Debian / Ubuntu
+sudo dnf install ./dysprosium-<version>-1.x86_64.rpm         # Fedora
+sudo pacman -U dysprosium-<version>-1-x86_64.pkg.tar.zst     # Arch (or build packaging/arch with makepkg)
 ```
 
-## Install as a service
+The package creates the `dysd` user and `dys` group, installs the units and the polkit rule, but
+does not start anything. Then, on every distro:
+
+```sh
+sudo usermod -aG dys "$USER"        # log out/in afterwards (lets you use `dys` without sudo)
+sudo systemctl enable --now dysd    # first start creates the CA + server cert
+sudo -u dysd dysd --state-dir /var/lib/dysd init --san <lan-ip> --san <tailscale-ip> --san <magicdns-name>
+sudo systemctl restart dysd
+sudo dys ping
+dys pair                            # after logging out/in; scan the QR code with the app
+```
+
+Optional settings: copy `/usr/share/doc/dysprosium/dysd.toml.example` to `/etc/dysd/dysd.toml`
+(`sudo install -Dm640 -o root -g dys … /etc/dysd/dysd.toml`), edit, `sudo systemctl restart dysd`.
+
+Firewall: open 50051/tcp (and 50052/tcp while pairing) for the LAN/tailnet if one is active. Fedora
+has firewalld on by default:
+`sudo firewall-cmd --permanent --add-port=50051/tcp --add-port=50052/tcp && sudo firewall-cmd --reload`.
+SELinux (Fedora): dysd runs as an unconfined service; not tested yet, report AVC denials
+(`sudo ausearch -m avc -ts recent`).
+
+### From source
+
+Build requirements: Rust ≥ 1.88 (rustup; Debian's packaged Rust is too old), protoc, a C compiler.
+
+```sh
+sudo pacman -S --needed rust protobuf                                      # Arch
+sudo apt install build-essential protobuf-compiler pkg-config              # Debian / Ubuntu (+ rustup)
+sudo dnf install gcc protobuf-compiler                                     # Fedora (+ rustup)
+```
 
 ```fish
 cargo build --release
@@ -212,25 +261,34 @@ sudo install -Dm644 packaging/dysd.sysusers /usr/lib/sysusers.d/dysd.conf
 sudo install -Dm644 packaging/dysd.tmpfiles /usr/lib/tmpfiles.d/dysd.conf
 sudo install -Dm644 -t /usr/lib/systemd/system packaging/dysd.service packaging/dysd-gpu-limit@.service \
     packaging/dysd-reboot-windows.service packaging/dysd-update.service
-sudo install -Dm755 -t /usr/lib/dysd packaging/libexec/reboot-to-windows packaging/libexec/record-update-result
+sudo install -Dm755 -t /usr/lib/dysd packaging/libexec/reboot-to-windows packaging/libexec/record-update-result \
+    packaging/libexec/apply-updates
 sudo install -Dm644 packaging/50-dysd.rules /usr/share/polkit-1/rules.d/50-dysd.rules
 sudo systemd-sysusers; and sudo systemd-tmpfiles --create /usr/lib/tmpfiles.d/dysd.conf
 # optional settings (Minecraft, alerts, fan modes); edit after installing
 test -e /etc/dysd/dysd.toml; or sudo install -Dm640 -o root -g dys packaging/dysd.toml.example /etc/dysd/dysd.toml
-sudo usermod -aG dys $USER          # log out/in afterwards
 sudo systemctl daemon-reload
-sudo systemctl enable --now dysd    # first start creates CA + server cert
-sudo -u dysd dysd --state-dir /var/lib/dysd init --san <lan-ip> --san <tailscale-ip> --san <magicdns-name>
-sudo systemctl restart dysd
-sudo dys ping                       # plain `dys ping` works after logging out/in (group dys)
 ```
 
-polkit picks up the rule file without a restart. Open ports 50051 (and 50052 while pairing) for
-LAN/tailnet only if a firewall is active.
+Then the same first-start steps as above. polkit picks up the rule file without a restart.
 
-Then pair the phone: `dys pair`, scan the QR code with the app.
+### Releasing (maintainer)
+
+1. Bump `version` in the root `Cargo.toml`, `cargo build` (updates `Cargo.lock`), commit.
+2. `git tag v<version> && git push --tags`. `.github/workflows/release.yml` builds the `.deb` (on
+   Debian 12, the oldest glibc of the targets), `.rpm`, Arch package and a tarball, and publishes a
+   GitHub Release with `SHA256SUMS`. The workflow refuses a tag that doesn't match `Cargo.toml`.
+3. AUR: in `packaging/arch/` set `pkgver`, `updpkgsums`, `makepkg --printsrcinfo > .SRCINFO`, push
+   `PKGBUILD`, `.SRCINFO` and `dysprosium.install` to the AUR repo.
+
+`.github/workflows/ci.yml` runs clippy, all Rust tests, the Dart client tests (end-to-end against
+the dysd it just built, with fake system tools) and the Flutter app tests on every push.
 
 ## Uninstall
+
+Installed from a package: `sudo apt purge dysprosium` (also deletes state, logs and config),
+`sudo dnf remove dysprosium` or `sudo pacman -Rns dysprosium` (these keep `/var/lib/dysd`,
+`/etc/dysd`; delete them by hand for a clean slate). Installed from source: the block below.
 
 Removes everything the install block created. The state directory holds the CA, the server cert,
 the paired phones, the saved GPU limit, lighting and profiles: after this every phone must pair

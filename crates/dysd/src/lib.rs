@@ -7,6 +7,7 @@ pub mod alerts;
 pub mod config;
 pub mod cooling;
 pub mod daemon;
+pub mod distro;
 pub mod fx;
 pub mod local;
 pub mod pairing;

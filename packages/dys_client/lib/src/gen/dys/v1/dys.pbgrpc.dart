@@ -64,7 +64,8 @@ class SystemClient extends $grpc.Client {
     return $createUnaryCall(_$rebootToWindows, request, options: options);
   }
 
-  /// Pending repo (checkupdates) + AUR (yay -Qua) updates. Read-only, cached for 10 min.
+  /// Pending updates: Arch repo (checkupdates) + AUR (yay -Qua), Debian/Ubuntu (apt simulation) or
+  /// Fedora (dnf check-upgrade). Read-only, cached for 10 min.
   $grpc.ResponseFuture<$0.UpdateList> checkUpdates(
     $0.CheckUpdatesRequest request, {
     $grpc.CallOptions? options,
@@ -72,7 +73,8 @@ class SystemClient extends $grpc.Client {
     return $createUnaryCall(_$checkUpdates, request, options: options);
   }
 
-  /// Starts dysd-update.service (pacman -Syu, repo packages only). LAN or local socket only.
+  /// Starts dysd-update.service (pacman -Syu / apt-get full-upgrade / dnf upgrade; repo packages
+  /// only). LAN or local socket only.
   $grpc.ResponseFuture<$0.UpdateStatus> applyUpdates(
     $0.ApplyUpdatesRequest request, {
     $grpc.CallOptions? options,

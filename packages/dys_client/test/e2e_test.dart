@@ -58,6 +58,7 @@ class Dysd {
     final logs = Directory('${dir.path}/logs')..createSync();
     // Only a [cooling] section pointing at a socket that can't exist: on europium the real
     // nzxt-ctl socket is reachable. Minecraft and alerts stay unconfigured.
+    File('${dir.path}/os-release').writeAsStringSync('ID=arch\n');
     File('${dir.path}/dysd.toml').writeAsStringSync('[cooling]\nnzxt_socket = "${dir.path}/no-nzxt-ctl.sock"\n');
     final proc = await Process.start(
       '$bin/dysd',
@@ -73,6 +74,8 @@ class Dysd {
         'DYSD_LOG_DIR': logs.path,
         // Port 1 refuses: never talk to the real OpenRGB server on the PC.
         'DYSD_OPENRGB_ADDR': '127.0.0.1:1',
+        // Pin the update backend to Arch (the fakebin checkupdates/yay), whatever this machine runs.
+        'DYSD_OS_RELEASE': '${dir.path}/os-release',
       },
     );
     final d = Dysd._(bin, dir, proc, main);

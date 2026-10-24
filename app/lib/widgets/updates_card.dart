@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'common.dart';
 
-/// Pending repo + AUR updates; apply repo updates (home network only), follow the log.
+/// Pending updates (pacman + AUR, apt or dnf); apply repo updates (home network only), follow the log.
 class UpdatesCard extends StatefulWidget {
   const UpdatesCard({super.key, required this.client});
 
@@ -84,11 +84,17 @@ class _UpdatesCardState extends State<UpdatesCard> {
   }
 
   Future<void> _apply(int repoCount) async {
+    final pm = _list?.packageManager ?? '';
+    final body = switch (pm) {
+      'apt' => 'Runs `apt-get update` and `apt-get full-upgrade` on the PC (changed config files are kept).',
+      'dnf' => 'Runs `dnf upgrade` on the PC.',
+      _ => 'Runs `pacman -Syu --noconfirm` on the PC. AUR packages are not touched. '
+          'Check the Arch news first if a big update is pending.',
+    };
     final ok = await confirmDialog(
       context,
-      title: 'Upgrade $repoCount repo package${repoCount == 1 ? '' : 's'}?',
-      body: 'Runs `pacman -Syu --noconfirm` on the PC. AUR packages are not touched. '
-          'Check the Arch news first if a big update is pending.',
+      title: 'Upgrade $repoCount package${repoCount == 1 ? '' : 's'}?',
+      body: body,
       action: 'Upgrade',
     );
     if (!ok) return;
@@ -126,10 +132,17 @@ class _UpdatesCardState extends State<UpdatesCard> {
         if (_checking) ...[
           const LinearProgressIndicator(),
           const SizedBox(height: 4),
-          Text('Checking (the PC syncs the package databases)…', style: theme.textTheme.bodySmall),
+          Text('Checking…', style: theme.textTheme.bodySmall),
         ],
         if (l != null && !_checking) ...[
-          Text('${repo.length} repo · ${aur.length} AUR', style: theme.textTheme.titleSmall),
+          Text(
+            l.packageManager == 'pacman' || l.packageManager.isEmpty
+                ? '${repo.length} repo · ${aur.length} AUR'
+                : '${repo.length} update${repo.length == 1 ? '' : 's'} via ${l.packageManager}',
+            key: const ValueKey('updates-summary'),
+            style: theme.textTheme.titleSmall,
+          ),
+          if (l.note.isNotEmpty) Text(l.note, key: const ValueKey('updates-note'), style: theme.textTheme.bodySmall),
           if (l.repoError.isNotEmpty) ErrorText(l.repoError),
           if (l.aurError.isNotEmpty) ErrorText(l.aurError),
           if (l.updates.isNotEmpty)
@@ -143,7 +156,7 @@ class _UpdatesCardState extends State<UpdatesCard> {
                     contentPadding: EdgeInsets.zero,
                     title: Text(u.name),
                     subtitle: Text('${u.oldVersion} → ${u.newVersion}'),
-                    trailing: Text(u.source == PackageUpdate_Source.AUR ? 'AUR' : 'repo'),
+                    trailing: Text(u.source == PackageUpdate_Source.AUR ? 'AUR' : (l.packageManager == 'pacman' || l.packageManager.isEmpty ? 'repo' : l.packageManager)),
                   ),
               ],
             ),
@@ -151,14 +164,14 @@ class _UpdatesCardState extends State<UpdatesCard> {
             Text('AUR updates are applied on the PC (yay).', style: theme.textTheme.bodySmall),
           const SizedBox(height: 8),
           if (repo.isEmpty && l.repoError.isEmpty)
-            Text('Repo packages are up to date.', style: theme.textTheme.bodySmall)
+            Text('Packages are up to date.', style: theme.textTheme.bodySmall)
           else if (repo.isNotEmpty && _onLan == false)
             Text('Applying updates only works on the home network.', style: theme.textTheme.bodySmall)
           else if (repo.isNotEmpty && _onLan == true)
             FilledButton.icon(
               onPressed: _running || _starting ? null : () => _apply(repo.length),
               icon: const Icon(Icons.download),
-              label: Text('Upgrade ${repo.length} repo package${repo.length == 1 ? '' : 's'}'),
+              label: Text('Upgrade ${repo.length} package${repo.length == 1 ? '' : 's'}'),
             ),
         ],
         if (st != null && st.state != UpdateStatus_State.NEVER) ...[

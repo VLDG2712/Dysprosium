@@ -3,5 +3,8 @@
 g dys -
 u dysd - "Dysprosium daemon" /var/lib/dysd
 m dysd dys
-# nzxt-ctl's socket (/run/nzxt-ctl/daemon.sock) is root:nzxt-ctl 0660; creates the group if missing.
+# nzxt-ctl's socket (/run/nzxt-ctl/daemon.sock) is root:nzxt-ctl 0660. Declared here too (a no-op
+# if nzxt-ctl already created it) so the rpm provides group(nzxt-ctl) itself: dnf would otherwise
+# refuse to install on PCs without nzxt-ctl.
+g nzxt-ctl -
 m dysd nzxt-ctl

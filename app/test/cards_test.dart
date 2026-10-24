@@ -377,9 +377,10 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('1 repo · 1 AUR'), findsOneWidget);
 
-    await t.tap(find.text('Upgrade 1 repo package'));
+    await t.tap(find.text('Upgrade 1 package'));
     await t.pumpAndSettle();
-    expect(find.text('Upgrade 1 repo package?'), findsOneWidget);
+    expect(find.text('Upgrade 1 package?'), findsOneWidget);
+    expect(find.textContaining('pacman -Syu'), findsOneWidget);
     await t.tap(find.text('Upgrade'));
     await t.pumpAndSettle();
     expect(c.calls, ['apply']);
@@ -403,8 +404,30 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('0 repo · 1 AUR'), findsOneWidget);
     expect(find.textContaining('Upgrade'), findsNothing);
-    expect(find.text('Repo packages are up to date.'), findsOneWidget);
+    expect(find.text('Packages are up to date.'), findsOneWidget);
   });
+
+  testWidgets('Updates card on Debian/Ubuntu: apt wording, lists-age note, no AUR', (t) async {
+    final c = AptClient();
+    await t.pumpWidget(_wrap(UpdatesCard(client: c)));
+    await t.tap(find.text('Check'));
+    await t.pumpAndSettle();
+    expect(find.text('1 update via apt'), findsOneWidget);
+    expect(find.text('apt package lists from 3 h ago (refreshed by apt-daily.timer)'), findsOneWidget);
+    expect(find.textContaining('AUR'), findsNothing);
+    await t.tap(find.text('Upgrade 1 package'));
+    await t.pumpAndSettle();
+    expect(find.textContaining('apt-get full-upgrade'), findsOneWidget);
+  });
+}
+
+class AptClient extends FakeClient {
+  @override
+  Future<UpdateList> checkUpdates({bool force = false}) async => UpdateList(
+        packageManager: 'apt',
+        note: 'apt package lists from 3 h ago (refreshed by apt-daily.timer)',
+        updates: [PackageUpdate(name: 'base-files', oldVersion: '13ubuntu10.1', newVersion: '13ubuntu10.2')],
+      );
 }
 
 class NoRepoClient extends FakeClient {

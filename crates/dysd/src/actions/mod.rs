@@ -2,7 +2,7 @@
 //! is a fixed systemd unit that polkit lets only the `dysd` user start (packaging/50-dysd.rules):
 //!   dysd-gpu-limit@<W>.service   nvidia-smi --power-limit=<W>
 //!   dysd-reboot-windows.service  BootNext = Windows Boot Manager, reboot
-//!   dysd-update.service          pacman -Syu --noconfirm (repo packages only)
+//!   dysd-update.service          /usr/lib/dysd/apply-updates (pacman / apt / dnf, repo packages)
 //! Reboot/shutdown/sleep go straight to logind (login1 polkit actions allowed for dysd).
 
 pub mod gpu;
@@ -28,6 +28,7 @@ use tracing::{info, warn};
 use crate::alerts::Alerter;
 use crate::config::Config;
 use crate::cooling::Cooling;
+use crate::distro::Family;
 use crate::rgb::RgbHub;
 use crate::state::write_atomic;
 use crate::stats::{Sampler, Sources, StatsHub};
@@ -52,6 +53,10 @@ pub struct Paths {
     pub update_log: PathBuf,
     /// `<result> <exit status> <unix>` written by the unit's ExecStopPost.
     pub update_status: PathBuf,
+    /// Debian/Ubuntu: exists when a package asked for a reboot.
+    pub reboot_required: PathBuf,
+    /// Debian/Ubuntu: when apt last refreshed its package lists (stamp file, else the lists dir).
+    pub apt_lists: Vec<PathBuf>,
 }
 
 impl Paths {
@@ -64,6 +69,11 @@ impl Paths {
             profiles: state_dir.join("profiles.json"),
             update_log: logs.join("update.log"),
             update_status: logs.join("update.status"),
+            reboot_required: PathBuf::from("/run/reboot-required"),
+            apt_lists: vec![
+                PathBuf::from("/var/lib/apt/periodic/update-success-stamp"),
+                PathBuf::from("/var/lib/apt/lists"),
+            ],
         }
     }
 }
@@ -96,6 +106,8 @@ pub struct Actions {
     info: info::InfoCache,
     /// /proc for GPU process names (tests point it elsewhere).
     stats_proc: PathBuf,
+    /// Package manager family (from /etc/os-release).
+    family: Family,
 }
 
 fn now_unix() -> u64 {
@@ -125,6 +137,7 @@ impl Actions {
             power_delay: Duration::from_millis(1500),
             info: info::InfoCache::new(info::Root::default()),
             stats_proc: Sources::default().proc,
+            family: Family::detect_system(),
             runner,
         }
     }
@@ -156,6 +169,17 @@ impl Actions {
     pub fn with_power_delay(mut self, d: Duration) -> Self {
         self.power_delay = d;
         self
+    }
+
+    /// Pretend to run on another distro family (tests).
+    #[must_use]
+    pub fn with_family(mut self, f: Family) -> Self {
+        self.family = f;
+        self
+    }
+
+    pub fn family(&self) -> Family {
+        self.family
     }
 
     /// Read /etc, /proc, /sys, /var/lib/pacman under another root (tests).
@@ -379,12 +403,39 @@ impl Actions {
             return Ok(list.clone());
         }
 
+        let mut list = UpdateList {
+            checked_unix: now_unix(),
+            package_manager: self.family.package_manager().to_owned(),
+            ..Default::default()
+        };
+        match self.family {
+            Family::Arch => self.check_pacman(&mut list).await,
+            Family::Debian => self.check_apt(&mut list).await,
+            Family::Fedora => self.check_dnf(&mut list).await,
+            Family::Unknown => {
+                list.repo_error = "unsupported distribution: dysd knows pacman, apt and dnf".to_owned();
+            }
+        }
+        info!(
+            n = list.updates.len(),
+            pm = %list.package_manager,
+            repo_err = !list.repo_error.is_empty(),
+            aur_err = !list.aur_error.is_empty(),
+            "checked updates"
+        );
+        // Don't cache a total failure.
+        let aur_counts = self.family == Family::Arch;
+        if list.repo_error.is_empty() || (aur_counts && list.aur_error.is_empty()) {
+            *cache = Some((Instant::now(), list.clone()));
+        }
+        Ok(list)
+    }
+
+    async fn check_pacman(&self, list: &mut UpdateList) {
         let (repo_args, aur_args) = (args(&["--nocolor"]), args(&["-Qua"]));
         let repo = self.runner.run("checkupdates", &repo_args, CHECK);
         let aur = self.runner.run("yay", &aur_args, CHECK);
         let (repo, aur) = tokio::join!(repo, aur);
-
-        let mut list = UpdateList { checked_unix: now_unix(), ..Default::default() };
         match repo {
             // checkupdates: 0 = updates, 2 = none, 1 = error
             Ok(o) if o.ok() => list.updates.extend(updates::parse_update_lines(&o.stdout, Source::Repo)),
@@ -399,17 +450,44 @@ impl Actions {
             Ok(o) => list.aur_error = format!("yay: {}", o.error_text()),
             Err(e) => list.aur_error = format!("{e:#}"),
         }
-        info!(
-            n = list.updates.len(),
-            repo_err = !list.repo_error.is_empty(),
-            aur_err = !list.aur_error.is_empty(),
-            "checked updates"
-        );
-        // Don't cache a total failure.
-        if list.repo_error.is_empty() || list.aur_error.is_empty() {
-            *cache = Some((Instant::now(), list.clone()));
+    }
+
+    /// Simulation only (no root): uses the package lists as apt-daily.timer last refreshed them.
+    async fn check_apt(&self, list: &mut UpdateList) {
+        let a = args(&["-s", "-o", "Debug::NoLocking=1", "full-upgrade"]);
+        match self.runner.run("apt-get", &a, CHECK).await {
+            Ok(o) if o.ok() => list.updates = updates::parse_apt_sim(&o.stdout),
+            Ok(o) => list.repo_error = format!("apt-get: {}", o.error_text()),
+            Err(e) => list.repo_error = format!("{e:#}"),
         }
-        Ok(list)
+        let age = self.paths.apt_lists.iter().find_map(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok());
+        if let Some(t) = age.and_then(|t| SystemTime::now().duration_since(t).ok()) {
+            list.note = format!("apt package lists from {} ago (refreshed by apt-daily.timer)", updates::age_text(t.as_secs()));
+        }
+    }
+
+    /// dnf5 as the dysd user: metadata is cached in its home (/var/lib/dysd).
+    async fn check_dnf(&self, list: &mut UpdateList) {
+        let a = args(&["check-upgrade", "--json", "-q"]);
+        match self.runner.run("dnf", &a, CHECK).await {
+            // 100 = updates available, 0 = none
+            Ok(o) if o.code == Some(100) || o.ok() => match updates::parse_dnf_json(&o.stdout) {
+                Some(mut l) => {
+                    if !l.is_empty() {
+                        let mut q = args(&["-q", "--qf", "%{NAME} %{EVR}\\n"]);
+                        q.extend(l.iter().map(|p| p.name.clone()));
+                        if let Ok(r) = self.runner.run("rpm", &q, SHORT).await {
+                            updates::fill_rpm_versions(&mut l, &r.stdout);
+                        }
+                    }
+                    list.updates = l;
+                }
+                None if o.ok() && o.stdout.trim().is_empty() => {}
+                None => list.repo_error = format!("dnf: unexpected output: {}", o.stdout.lines().next().unwrap_or("")),
+            },
+            Ok(o) => list.repo_error = format!("dnf: {}", o.error_text()),
+            Err(e) => list.repo_error = format!("{e:#}"),
+        }
     }
 
     pub async fn apply_updates(&self, confirm: bool) -> Result<UpdateStatus, Status> {
@@ -442,7 +520,8 @@ impl Actions {
         let mut st = UpdateStatus {
             state: state as i32,
             log_tail: updates::tail(&log, n),
-            reboot_recommended: updates::log_needs_reboot(&log),
+            reboot_recommended: updates::log_needs_reboot(&log, self.family)
+                || (self.family == Family::Debian && self.paths.reboot_required.exists()),
             ..Default::default()
         };
         if let Some(l) = last {
@@ -474,8 +553,10 @@ mod tests {
             profiles: dir.path().join("profiles.json"),
             update_log: dir.path().join("update.log"),
             update_status: dir.path().join("update.status"),
+            reboot_required: dir.path().join("reboot-required"),
+            apt_lists: vec![dir.path().join("apt-stamp")],
         };
-        (fake.clone(), Actions::new(fake, paths), dir)
+        (fake.clone(), Actions::new(fake, paths).with_family(Family::Arch), dir)
     }
 
     #[tokio::test]
@@ -601,6 +682,56 @@ mod tests {
         let l = a.check_updates(true).await.unwrap();
         assert!(l.updates.is_empty());
         assert!(l.aur_error.contains("No such file"));
+    }
+
+    #[tokio::test]
+    async fn apt_backend_check_note_and_reboot_flag() {
+        let (f, a, d) = setup();
+        let a = a.with_family(Family::Debian);
+        std::fs::write(d.path().join("apt-stamp"), "").unwrap();
+        f.on("apt-get -s -o Debug::NoLocking=1 full-upgrade", out(0,
+            "NOTE: This is only a simulation!\nInst base-files [13ubuntu10.1] (13ubuntu10.2 Ubuntu:24.04/noble-updates [amd64])\n", ""));
+        let l = a.check_updates(true).await.unwrap();
+        assert_eq!(l.package_manager, "apt");
+        assert_eq!(l.updates.len(), 1);
+        assert_eq!(l.updates[0].name, "base-files");
+        assert!(l.note.starts_with("apt package lists from 0 min ago"), "{}", l.note);
+        assert!(l.aur_error.is_empty());
+        assert!(!f.calls().iter().any(|c| c.starts_with("checkupdates") || c.starts_with("yay")));
+
+        f.on("systemctl --no-ask-password show", out(0, "inactive\n", ""));
+        assert!(!a.update_status(5).await.unwrap().reboot_recommended);
+        std::fs::write(d.path().join("reboot-required"), "*** System restart required ***\n").unwrap();
+        assert!(a.update_status(5).await.unwrap().reboot_recommended, "/run/reboot-required honoured");
+    }
+
+    #[tokio::test]
+    async fn dnf_backend_exit_100_with_rpm_versions_and_errors() {
+        let (f, a, _d) = setup();
+        let a = a.with_family(Family::Fedora);
+        f.on("dnf check-upgrade --json -q", out(100,
+            r#"{"Upgrades":[{"name":"kernel-core","arch":"x86_64","evr":"6.16.10-200.fc43","repository":"updates"}]}"#, ""));
+        f.on("rpm -q --qf", out(0, "kernel-core 6.16.9-200.fc43\n", ""));
+        let l = a.check_updates(true).await.unwrap();
+        assert_eq!(l.package_manager, "dnf");
+        assert_eq!(l.updates.len(), 1);
+        let p = &l.updates[0];
+        assert_eq!((p.old_version.as_str(), p.new_version.as_str()), ("6.16.9-200.fc43", "6.16.10-200.fc43"));
+        assert!(f.calls().iter().any(|c| c == "rpm -q --qf %{NAME} %{EVR}\\n kernel-core"), "{:?}", f.calls());
+
+        let (f, a, _d) = setup();
+        let a = a.with_family(Family::Fedora);
+        f.on("dnf check-upgrade --json -q", out(0, "", ""));
+        assert!(a.check_updates(true).await.unwrap().updates.is_empty(), "exit 0 + no output = nothing to do");
+
+        let (f, a, _d) = setup();
+        let a = a.with_family(Family::Fedora);
+        f.on("dnf check-upgrade --json -q", out(1, "", "Error: Failed to download metadata for repo 'updates'"));
+        assert_eq!(a.check_updates(true).await.unwrap().repo_error, "dnf: Error: Failed to download metadata for repo 'updates'");
+
+        let (_f, a, _d) = setup();
+        let l = a.with_family(Family::Unknown).check_updates(true).await.unwrap();
+        assert!(l.repo_error.contains("unsupported distribution"));
     }
 
     #[tokio::test]

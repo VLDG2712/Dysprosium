@@ -176,6 +176,8 @@ const UpdateList$json = {
     {'1': 'checked_unix', '3': 2, '4': 1, '5': 4, '10': 'checkedUnix'},
     {'1': 'repo_error', '3': 3, '4': 1, '5': 9, '10': 'repoError'},
     {'1': 'aur_error', '3': 4, '4': 1, '5': 9, '10': 'aurError'},
+    {'1': 'package_manager', '3': 5, '4': 1, '5': 9, '10': 'packageManager'},
+    {'1': 'note', '3': 6, '4': 1, '5': 9, '10': 'note'},
   ],
 };
 
@@ -183,7 +185,8 @@ const UpdateList$json = {
 final $typed_data.Uint8List updateListDescriptor = $convert.base64Decode(
     'CgpVcGRhdGVMaXN0Ei8KB3VwZGF0ZXMYASADKAsyFS5keXMudjEuUGFja2FnZVVwZGF0ZVIHdX'
     'BkYXRlcxIhCgxjaGVja2VkX3VuaXgYAiABKARSC2NoZWNrZWRVbml4Eh0KCnJlcG9fZXJyb3IY'
-    'AyABKAlSCXJlcG9FcnJvchIbCglhdXJfZXJyb3IYBCABKAlSCGF1ckVycm9y');
+    'AyABKAlSCXJlcG9FcnJvchIbCglhdXJfZXJyb3IYBCABKAlSCGF1ckVycm9yEicKD3BhY2thZ2'
+    'VfbWFuYWdlchgFIAEoCVIOcGFja2FnZU1hbmFnZXISEgoEbm90ZRgGIAEoCVIEbm90ZQ==');
 
 @$core.Deprecated('Use applyUpdatesRequestDescriptor instead')
 const ApplyUpdatesRequest$json = {

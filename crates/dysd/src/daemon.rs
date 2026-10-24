@@ -56,6 +56,7 @@ impl Daemon {
         if let Some(addr) = std::env::var_os("DYSD_OPENRGB_ADDR") {
             actions = actions.with_openrgb_addr(addr.to_string_lossy());
         }
+        info!(package_manager = actions.family().package_manager(), "distribution detected");
         let actions = Arc::new(actions);
         Ok(Self {
             state,

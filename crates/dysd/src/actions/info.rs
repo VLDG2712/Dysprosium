@@ -1,9 +1,10 @@
 //! GetInfo: static facts about the PC, fastfetch-style, as titled sections of label/value pairs.
 //!
 //! Everything is readable without privileges: /etc/os-release, /etc/passwd + /etc/shells, /proc,
-//! /sys (DMI, CPU topology, block devices), the pacman database, plus a few commands run as dysd:
+//! /sys (DMI, CPU topology, block devices), the package database (pacman, dpkg or rpm), plus a few
+//! commands run as dysd:
 //! `nvidia-smi` (GPU), `loginctl` (who is on the desktop, which desktop), `<shell> --version`,
-//! `pacman -Q` (desktop version) and `ip -j addr` (addresses). Anything missing is left out, not
+//! `pacman -Q` / `dpkg-query` / `rpm -q` (desktop version) and `ip -j addr` (addresses). Anything missing is left out, not
 //! an error. Serial numbers (root-only in /sys) are never read.
 
 use std::collections::BTreeSet;
@@ -16,6 +17,7 @@ use tokio::sync::Mutex;
 use tracing::debug;
 
 use super::runner::{Runner, args};
+use crate::distro::Family;
 
 const TTL: Duration = Duration::from_secs(60);
 const CMD: Duration = Duration::from_secs(5);
@@ -248,6 +250,44 @@ fn pacman_count(root: &Root) -> Option<usize> {
     (n > 0).then_some(n)
 }
 
+/// Installed packages in dpkg's status file.
+pub fn dpkg_count(status: &str) -> usize {
+    status.lines().filter(|l| l.trim() == "Status: install ok installed").count()
+}
+
+/// Package count for the detected family: (count, label).
+async fn package_count(root: &Root, runner: &dyn Runner, family: Family) -> Option<String> {
+    let n = match family {
+        Family::Arch => pacman_count(root),
+        Family::Debian => Some(dpkg_count(&root.read("var/lib/dpkg/status")?)).filter(|n| *n > 0),
+        Family::Fedora => run(runner, "rpm", &["-qa", "--qf", ".\\n"]).await.map(|o| o.lines().count()).filter(|n| *n > 0),
+        Family::Unknown => None,
+    }?;
+    Some(format!("{n} ({})", match family {
+        Family::Debian => "dpkg",
+        Family::Fedora => "rpm",
+        f => f.package_manager(),
+    }))
+}
+
+/// Upstream part of a Debian version: "4:6.5.0-0ubuntu1" → "6.5.0".
+pub fn debian_upstream(v: &str) -> String {
+    let v = v.trim();
+    let v = v.split_once(':').map_or(v, |(_, r)| r);
+    v.rsplit_once('-').map_or(v, |(a, _)| a).to_owned()
+}
+
+/// Version of an installed package via the family's package manager.
+async fn installed_version(runner: &dyn Runner, family: Family, pkg: &str) -> Option<String> {
+    let out = match family {
+        Family::Arch => return run(runner, "pacman", &["-Q", pkg]).await.as_deref().and_then(pacman_version),
+        Family::Debian => run(runner, "dpkg-query", &["-W", "-f=${Version}", pkg]).await.map(|v| debian_upstream(&v)),
+        Family::Fedora => run(runner, "rpm", &["-q", "--qf", "%{VERSION}", pkg]).await.map(|v| v.trim().to_owned()),
+        Family::Unknown => None,
+    }?;
+    (!out.is_empty()).then_some(out)
+}
+
 /// logind's Desktop value → (display name, package that carries its version).
 fn desktop_package(desktop: &str) -> (&str, Option<&'static str>) {
     match desktop.to_ascii_lowercase().as_str() {
@@ -285,7 +325,8 @@ async fn system(root: &Root, runner: &dyn Runner, session: Option<Session>) -> S
             .and_then(|u| u.split_whitespace().next().and_then(|x| x.parse::<f64>().ok()))
             .map(|x| uptime_text(x as u64)),
     );
-    s.add("Packages", pacman_count(root).map(|n| format!("{n} (pacman)")));
+    let family = Family::detect(&root.0);
+    s.add("Packages", package_count(root, runner, family).await);
 
     let passwd = root.read("etc/passwd").unwrap_or_default();
     let user = session.as_ref().map(|x| x.user.as_str());
@@ -301,7 +342,7 @@ async fn system(root: &Root, runner: &dyn Runner, session: Option<Session>) -> S
     if let Some(sess) = session.filter(|x| !x.desktop.is_empty()) {
         let (name, pkg) = desktop_package(&sess.desktop);
         let ver = match pkg {
-            Some(p) => run(runner, "pacman", &["-Q", p]).await.as_deref().and_then(pacman_version),
+            Some(p) => installed_version(runner, family, p).await,
             None => None,
         };
         let kind = match sess.kind.as_str() {
@@ -590,7 +631,7 @@ mod tests {
         w(r, "proc/cpuinfo", "processor : 0\nmodel name : Intel(R) Core(TM) i7-14700KF\n");
         w(r, "proc/meminfo", "MemTotal: 32695808 kB\nSwapTotal: 16347900 kB\n");
         w(r, "proc/swaps", "Filename\tType\tSize\tUsed\tPriority\n/dev/zram0 partition 16347900 0 100\n");
-        w(r, "etc/os-release", "NAME=\"Arch Linux\"\nPRETTY_NAME=\"Arch Linux\"\n");
+        w(r, "etc/os-release", "NAME=\"Arch Linux\"\nID=arch\nPRETTY_NAME=\"Arch Linux\"\n");
         w(r, "etc/passwd", "root:x:0:0::/root:/usr/bin/bash\nvldg:x:1000:1000::/home/vldg:/usr/bin/fish\n");
         w(r, "etc/shells", "/bin/sh\n/usr/bin/bash\n/usr/bin/fish\n");
         w(r, "sys/class/dmi/id/sys_vendor", "To Be Filled By O.E.M.\n");
@@ -663,6 +704,45 @@ mod tests {
         assert_eq!(get("Storage", "nvme0n1").as_deref(), Some("Samsung SSD 990 PRO 2TB · 1.8 TiB · NVMe SSD · fw 4B2QJXD7"));
         assert!(get("Storage", "loop0").is_none());
         assert!(get("Network", "enp4s0").unwrap().ends_with("1000 Mb/s"));
+    }
+
+    #[tokio::test]
+    async fn debian_and_fedora_counts_and_versions() {
+        use crate::actions::runner::fake::{FakeRunner, out};
+        let d = tempfile::tempdir().unwrap();
+        w(d.path(), "etc/os-release", "ID=ubuntu\nID_LIKE=debian\nPRETTY_NAME=\"Ubuntu 24.04.3 LTS\"\n");
+        w(d.path(), "var/lib/dpkg/status", "Package: a\nStatus: install ok installed\n\nPackage: b\nStatus: deinstall ok config-files\n\nPackage: c\nStatus: install ok installed\n");
+        let f = FakeRunner::default();
+        for p in ["nvidia-smi", "ip"] {
+            f.on(p, out(127, "", "not found"));
+        }
+        f.on("loginctl list-sessions", out(0, "  2 1000 tester seat0 1 user tty1 no -\n", ""));
+        f.on("loginctl show-session", out(0, "Name=tester\nDesktop=GNOME\nType=wayland\nClass=user\nActive=yes\n", ""));
+        f.on("dpkg-query -W -f=${Version} gnome-shell", out(0, "46.0-0ubuntu6~24.04.4", ""));
+        let i = collect(&Root(d.path().to_owned()), &f).await;
+        let sys = &i.sections[0];
+        let get = |k: &str| sys.items.iter().find(|x| x.label == k).map(|x| x.value.clone());
+        assert_eq!(get("Packages").as_deref(), Some("2 (dpkg)"));
+        assert_eq!(get("Desktop").as_deref(), Some("GNOME 46.0 (Wayland)"));
+        assert_eq!(get("OS").as_deref(), Some("Ubuntu 24.04.3 LTS"));
+
+        let d = tempfile::tempdir().unwrap();
+        w(d.path(), "etc/os-release", "ID=fedora\nPRETTY_NAME=\"Fedora Linux 43 (KDE Plasma Desktop Edition)\"\n");
+        let f = FakeRunner::default();
+        for p in ["nvidia-smi", "ip"] {
+            f.on(p, out(127, "", "not found"));
+        }
+        f.on("loginctl list-sessions", out(0, "  2 1000 tester seat0 1 user tty1 no -\n", ""));
+        f.on("loginctl show-session", out(0, "Name=tester\nDesktop=KDE\nType=wayland\nClass=user\nActive=yes\n", ""));
+        f.on("rpm -qa", out(0, ".\n.\n.\n.\n", ""));
+        f.on("rpm -q --qf %{VERSION} plasma-workspace", out(0, "6.5.1", ""));
+        let i = collect(&Root(d.path().to_owned()), &f).await;
+        let sys = &i.sections[0];
+        let get = |k: &str| sys.items.iter().find(|x| x.label == k).map(|x| x.value.clone());
+        assert_eq!(get("Packages").as_deref(), Some("4 (rpm)"));
+        assert_eq!(get("Desktop").as_deref(), Some("KDE Plasma 6.5.1 (Wayland)"));
+        assert_eq!(debian_upstream("4:6.5.0-0ubuntu1"), "6.5.0");
+        assert_eq!(debian_upstream("1.2"), "1.2");
     }
 
     #[tokio::test]

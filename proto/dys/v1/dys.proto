@@ -14,9 +14,11 @@ service System {
   // Sets UEFI BootNext to Windows Boot Manager and reboots (dysd-reboot-windows.service).
   rpc RebootToWindows(RebootToWindowsRequest) returns (RebootToWindowsReply);
 
-  // Pending repo (checkupdates) + AUR (yay -Qua) updates. Read-only, cached for 10 min.
+  // Pending updates: Arch repo (checkupdates) + AUR (yay -Qua), Debian/Ubuntu (apt simulation) or
+  // Fedora (dnf check-upgrade). Read-only, cached for 10 min.
   rpc CheckUpdates(CheckUpdatesRequest) returns (UpdateList);
-  // Starts dysd-update.service (pacman -Syu, repo packages only). LAN or local socket only.
+  // Starts dysd-update.service (pacman -Syu / apt-get full-upgrade / dnf upgrade; repo packages
+  // only). LAN or local socket only.
   rpc ApplyUpdates(ApplyUpdatesRequest) returns (UpdateStatus);
   rpc GetUpdateStatus(GetUpdateStatusRequest) returns (UpdateStatus);
 
@@ -132,7 +134,11 @@ message UpdateList {
   uint64 checked_unix = 2;
   // Non-empty if that half of the check failed (the other half may still be valid).
   string repo_error = 3;
-  string aur_error = 4;
+  string aur_error = 4; // Arch only (yay); empty elsewhere
+  string package_manager = 5; // pacman, apt or dnf
+  // Context worth showing, e.g. "apt package lists from 5 h ago" (apt can't refresh them without
+  // root; apt-daily.timer does it).
+  string note = 6;
 }
 
 message ApplyUpdatesRequest {

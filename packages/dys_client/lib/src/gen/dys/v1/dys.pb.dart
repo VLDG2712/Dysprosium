@@ -659,12 +659,16 @@ class UpdateList extends $pb.GeneratedMessage {
     $fixnum.Int64? checkedUnix,
     $core.String? repoError,
     $core.String? aurError,
+    $core.String? packageManager,
+    $core.String? note,
   }) {
     final result = UpdateList._();
     if (updates != null) result.updates.addAll(updates);
     if (checkedUnix != null) result.checkedUnix = checkedUnix;
     if (repoError != null) result.repoError = repoError;
     if (aurError != null) result.aurError = aurError;
+    if (packageManager != null) result.packageManager = packageManager;
+    if (note != null) result.note = note;
     return result;
   }
 
@@ -688,6 +692,8 @@ class UpdateList extends $pb.GeneratedMessage {
         defaultOrMaker: $fixnum.Int64.ZERO)
     ..aOS(3, _omitFieldNames ? '' : 'repoError')
     ..aOS(4, _omitFieldNames ? '' : 'aurError')
+    ..aOS(5, _omitFieldNames ? '' : 'packageManager')
+    ..aOS(6, _omitFieldNames ? '' : 'note')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -740,6 +746,26 @@ class UpdateList extends $pb.GeneratedMessage {
   $core.bool hasAurError() => $_has(3);
   @$pb.TagNumber(4)
   void clearAurError() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get packageManager => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set packageManager($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasPackageManager() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearPackageManager() => $_clearField(5);
+
+  /// Context worth showing, e.g. "apt package lists from 5 h ago" (apt can't refresh them without
+  /// root; apt-daily.timer does it).
+  @$pb.TagNumber(6)
+  $core.String get note => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set note($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasNote() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearNote() => $_clearField(6);
 }
 
 class ApplyUpdatesRequest extends $pb.GeneratedMessage {

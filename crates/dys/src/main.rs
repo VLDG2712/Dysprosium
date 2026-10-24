@@ -55,7 +55,7 @@ enum Cmd {
         #[command(subcommand)]
         cmd: Option<GpuCmd>,
     },
-    /// Pending updates (repo + AUR); apply repo updates.
+    /// Pending updates (pacman + AUR, apt or dnf); apply repo updates.
     Updates {
         #[command(subcommand)]
         cmd: Option<UpdatesCmd>,
@@ -375,7 +375,7 @@ async fn main() -> Result<()> {
         Cmd::Updates { cmd: None } => updates_check(ch, false).await?,
         Cmd::Updates { cmd: Some(UpdatesCmd::Check) } => updates_check(ch, true).await?,
         Cmd::Updates { cmd: Some(UpdatesCmd::Apply { yes }) } => {
-            if !yes && !confirm("Run `pacman -Syu --noconfirm` now?")? {
+            if !yes && !confirm("Upgrade all repository packages now (pacman -Syu / apt-get full-upgrade / dnf upgrade)?")? {
                 bail!("cancelled");
             }
             let mut c = SystemClient::new(ch);
@@ -727,7 +727,7 @@ async fn rgb(ch: Channel, cmd: Option<RgbCmd>) -> Result<()> {
 
 async fn updates_check(ch: Channel, force: bool) -> Result<()> {
     if force {
-        println!("checking (syncs a temporary copy of the package databases)…");
+        println!("checking…");
     }
     let l = rpc(SystemClient::new(ch).check_updates(CheckUpdatesRequest { force }).await)?;
     let (mut repo, mut aur) = (0, 0);
@@ -741,7 +741,15 @@ async fn updates_check(ch: Channel, force: bool) -> Result<()> {
         };
         println!("{src}  {} {} -> {}", u.name, u.old_version, u.new_version);
     }
-    println!("{repo} repo, {aur} AUR update(s); checked at {}", l.checked_unix);
+    let pm = if l.package_manager.is_empty() { "repo".to_owned() } else { l.package_manager.clone() };
+    if l.package_manager == "pacman" {
+        println!("{repo} repo, {aur} AUR update(s) via {pm}; checked at {}", l.checked_unix);
+    } else {
+        println!("{repo} update(s) via {pm}; checked at {}", l.checked_unix);
+    }
+    if !l.note.is_empty() {
+        println!("note: {}", l.note);
+    }
     if !l.repo_error.is_empty() {
         println!("repo check failed: {}", l.repo_error);
     }
