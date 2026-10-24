@@ -1,0 +1,7 @@
+#!/bin/sh
+# dysprosium prerm: stop and disable dysd when the package is removed (not on upgrade).
+set -e
+if [ "$1" = remove ] && [ -d /run/systemd/system ]; then
+    systemctl disable --now dysd.service || true
+fi
+exit 0

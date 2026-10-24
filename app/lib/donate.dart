@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Voluntary donations: a quiet section in Settings, no ads, no reminders, no tracking.
+/// Donation links shown at the bottom of Settings.
 ///
 /// Off for store builds that don't allow donation links to individuals (Google Play only allows
 /// validated charities): `flutter build apk --dart-define=DONATIONS=false`.
@@ -74,8 +74,8 @@ class SupportSection extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
         child: Text(
-          'Dysprosium is free and open source: no ads, no tracking, nothing locked. If it is useful to you, '
-          'you can support its development. Entirely optional; the app works the same either way.',
+          "If you find Dysprosium useful and want to chip in, here's how. "
+          'Nothing in the app depends on it.',
           style: t.textTheme.bodyMedium,
         ),
       ),

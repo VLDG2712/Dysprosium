@@ -1,0 +1,97 @@
+# On a version tag (v0.2.0, ...): build dysd + dys and publish a GitHub Release with
+#   dysprosium_<v>-1_amd64.deb       Debian 12+, Ubuntu 24.04+ (built on Debian 12: oldest glibc)
+#   dysprosium-<v>-1.x86_64.rpm      Fedora
+#   dysprosium-<v>-1-x86_64.pkg.tar.zst  Arch (from packaging/arch/PKGBUILD, same as the AUR one)
+#   dysprosium-<v>-x86_64-linux.tar.gz   binaries + packaging files, for anything else
+#   SHA256SUMS
+# The tag must match the version in Cargo.toml (bump it first, commit, then tag).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  deb-rpm:
+    runs-on: ubuntu-latest
+    container: debian:12
+    steps:
+      - name: Build tools
+        run: |
+          apt-get update -q
+          apt-get install -y -q --no-install-recommends ca-certificates curl git build-essential pkg-config protobuf-compiler
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: actions/checkout@v7
+      - name: Tag matches Cargo.toml
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          c="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -1)"
+          [ "$v" = "$c" ] || { echo "tag $GITHUB_REF_NAME does not match Cargo.toml version $c"; exit 1; }
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+      - run: cargo test --workspace --locked
+      - run: cargo build --release --locked -p dysd -p dys
+      - run: cargo install --locked cargo-deb@3.8.0 cargo-generate-rpm@0.21.1
+      - name: .deb + .rpm
+        run: |
+          cargo deb -p dysd --no-build
+          cargo generate-rpm -p crates/dysd
+      - name: Tarball
+        run: |
+          d="dysprosium-$VERSION-x86_64-linux"
+          mkdir -p "$d/bin" dist
+          cp target/release/dysd target/release/dys "$d/bin/"
+          cp -r packaging README.md LICENSE-MIT LICENSE-APACHE "$d/"
+          tar czf "dist/$d.tar.gz" "$d"
+          cp target/debian/*.deb target/generate-rpm/*.rpm dist/
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deb-rpm
+          path: dist/*
+
+  arch:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Build tools
+        run: pacman -Syu --noconfirm --needed base-devel git rust protobuf
+      - uses: actions/checkout@v7
+      - name: makepkg (the AUR PKGBUILD, from this commit instead of the GitHub tarball)
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          v="${GITHUB_REF_NAME#v}"
+          useradd -m builder
+          cd packaging/arch
+          sed -i "s/^pkgver=.*/pkgver=$v/" PKGBUILD
+          # Same name/prefix as GitHub's tag tarball, so makepkg uses it instead of downloading.
+          git -C "$GITHUB_WORKSPACE" archive --prefix="Dysprosium-$v/" -o "$PWD/dysprosium-$v.tar.gz" HEAD
+          chown -R builder: .
+          su builder -c "makepkg --noconfirm --skipchecksums -f"
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp ./*.pkg.tar.zst "$GITHUB_WORKSPACE/dist/"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: arch
+          path: dist/*
+
+  publish:
+    needs: [deb-rpm, arch]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          sha256sum -- * > SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" ./* --repo "$GITHUB_REPOSITORY" \
+            --title "Dysprosium $GITHUB_REF_NAME" --generate-notes

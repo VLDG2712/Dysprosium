@@ -1,0 +1,57 @@
+# Maintainer: VLDG2712 <ddutu10@gmail.com>
+# Builds dysd + dys from a release tag. Also used by .github/workflows/release.yml (with a local
+# tarball of the tagged commit). For the AUR: set pkgver, run `updpkgsums`, `makepkg --printsrcinfo > .SRCINFO`.
+pkgname=dysprosium
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Control your Linux PC from your phone: daemon dysd + CLI dys (stats, GPU, lighting, cooling, updates, power)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/VLDG2712/Dysprosium"
+license=('MIT OR Apache-2.0')
+depends=('systemd' 'polkit' 'glibc' 'gcc-libs' 'pacman-contrib')
+makedepends=('cargo' 'protobuf')
+optdepends=(
+  'efibootmgr: reboot into Windows'
+  'nvidia-utils: GPU stats and power limit'
+  'yay: AUR update check'
+  'openrgb: lighting'
+  'nzxt-ctl-git: pump/fan control'
+)
+install=dysprosium.install
+source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+_dir() { echo "$srcdir/Dysprosium-$pkgver"; }
+
+prepare() {
+  cd "$(_dir)"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "$(_dir)"
+  export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+  cargo build --frozen --release -p dysd -p dys
+}
+
+check() {
+  cd "$(_dir)"
+  export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+  cargo test --frozen --workspace
+}
+
+package() {
+  cd "$(_dir)"
+  install -Dm755 target/release/dysd "$pkgdir/usr/bin/dysd"
+  install -Dm755 target/release/dys "$pkgdir/usr/bin/dys"
+  install -Dm644 -t "$pkgdir/usr/lib/systemd/system" packaging/dysd.service packaging/dysd-gpu-limit@.service \
+    packaging/dysd-reboot-windows.service packaging/dysd-update.service
+  install -Dm755 -t "$pkgdir/usr/lib/dysd" packaging/libexec/reboot-to-windows \
+    packaging/libexec/record-update-result packaging/libexec/apply-updates
+  install -Dm644 packaging/dysd.sysusers "$pkgdir/usr/lib/sysusers.d/dysd.conf"
+  install -Dm644 packaging/dysd.tmpfiles "$pkgdir/usr/lib/tmpfiles.d/dysd.conf"
+  install -Dm644 packaging/50-dysd.rules "$pkgdir/usr/share/polkit-1/rules.d/50-dysd.rules"
+  install -Dm644 -t "$pkgdir/usr/share/doc/$pkgname" packaging/dysd.toml.example README.md
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE-MIT LICENSE-APACHE
+}

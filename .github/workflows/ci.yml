@@ -1,0 +1,52 @@
+# Tests on every push to master and every pull request: Rust (clippy + tests), the Dart client
+# (incl. end-to-end tests against the dysd built here, with fake system tools) and the Flutter app.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-and-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Rust toolchain + protoc
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q protobuf-compiler
+          rustup toolchain install stable --profile minimal -c clippy
+          rustup default stable
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: cargo build --locked -p dysd -p dys
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.6
+      - name: Dart client (end-to-end against the dysd above; fake nvidia-smi/systemctl/busctl/...)
+        working-directory: packages/dys_client
+        run: |
+          chmod +x test/fakebin/*
+          dart pub get
+          dart analyze
+          DYS_BIN_DIR="$GITHUB_WORKSPACE/target/debug" dart test
+
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.6
+      - name: Flutter app
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test

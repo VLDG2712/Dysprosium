@@ -1,6 +1,12 @@
 # Dysprosium
 
-`dysd` (daemon) + `dys` (CLI) + Flutter phone app (`app/`, core in `packages/dys_client`).
+I wanted to control my desktop from my phone without opening a remote desktop: check temps, set the
+GPU power limit, change the lighting and fan mode, install updates, reboot into Windows, restart the
+Minecraft server. Dysprosium is that.
+
+It has three parts: `dysd`, a small daemon on the PC; `dys`, a CLI for the same things on the PC
+itself; and an Android app (`app/`, the non-UI part in `packages/dys_client`). The phone talks to
+dysd over gRPC with mutual TLS, after pairing once with a QR code.
 
 ## Workspace
 
@@ -48,14 +54,14 @@ Reboot / shutdown / sleep go to logind directly; the same rules file grants user
 | GPU power limit | `dysd-gpu-limit@<W>.service` → `nvidia-smi --power-limit=<W>` | dysd reads limits with `nvidia-smi` and checks the range; the rule also only accepts 50–600. The set value is saved in `gpu.json` and reapplied when dysd starts. |
 | Reboot to Windows | `dysd-reboot-windows.service` → `/usr/lib/dysd/reboot-to-windows` | Finds the "Windows Boot Manager" entry by label, sets BootNext, checks it stuck, reboots. Phone always asks first. |
 | Apply updates | `dysd-update.service` → `/usr/lib/dysd/apply-updates` (`pacman -Syu` / `apt-get full-upgrade` / `dnf upgrade`) | Repo packages only. Refused unless the caller is on the LAN (or the admin socket). Output in `/var/log/dysd/update.log`, result in `update.status`. |
-| Check updates | (none, runs as dysd) | `checkupdates` + `yay -Qua`, cached 10 min. |
-| Reboot / shut down / sleep | (none: logind `Reboot`/`PowerOff`/`Suspend` via `busctl`) | dysd asks logind first (`CanReboot` etc.): polkit missing, unsupported, or an app holding a block inhibitor (named in the error) refuse it before anything happens. Then it replies and acts 1.5 s later. Allowed away from home; the phone warns that waking it again needs Home Assistant over Tailscale, and about Minecraft players online. |
+| Check updates | (none, runs as dysd) | Arch: `checkupdates` + `yay -Qua`. Debian/Ubuntu: apt simulation. Fedora: `dnf check-upgrade`. Cached 10 min. |
+| Reboot / shut down / sleep | (none: logind `Reboot`/`PowerOff`/`Suspend` via `busctl`) | dysd checks with logind first (`CanReboot` etc.), so a missing polkit rule or an app blocking it (named in the error) stops it before anything happens. Otherwise it replies, then acts 1.5 s later. Works away from home too; the phone warns you that waking the PC again needs Home Assistant over Tailscale, and if anyone is on the Minecraft server. |
 
 ```fish
 dys gpu                     # limits, draw, saved value
 dys gpu set 250             # or: dys gpu set default
 dys updates                 # cached check;  dys updates check  = fresh
-dys updates apply           # asks, then follows the pacman output
+dys updates apply           # asks, then follows the upgrade log
 dys updates status -n 50
 dys reboot-windows          # asks first
 dys power reboot            # or shutdown / sleep; asks first (-y to skip)
@@ -150,8 +156,8 @@ dys alerts test                   # ntfy test notification
   CPU/GPU/liquid temperature over threshold (re-arms 5 °C below), nzxt-ctl failsafe, update run
   finished, Minecraft unit failed; one alert per kind per `cooldown_min`.
 - **Info** (`GetInfo`, cached 60 s): /etc/os-release, DMI (board/BIOS, no serials), CPU topology
-  (P/E cores on hybrid Intel), pacman package count, login shell of the desktop user (`loginctl`;
-  only shells listed in /etc/shells are run for `--version`), desktop + version (`pacman -Q`),
+  (P/E cores on hybrid Intel), package count, login shell of the desktop user (`loginctl`;
+  only shells listed in /etc/shells are run for `--version`), desktop + version (from the package manager),
   `nvidia-smi`, /sys/block, `ip -j addr`. Sent as titled label/value sections, so the phone shows
   new items without an app update.
 - **Wake-on-LAN**: done by the phone through Home Assistant's Wake on LAN entity (dysd is off then): a `button.…` when the integration was added in the UI (pressed), a `switch.…` when configured in YAML (turned on).
@@ -164,7 +170,7 @@ cargo build
 set D target/debug/dysd
 set Y target/debug/dys
 
-# Terminal 1 — LAN IP / Tailscale IP are examples, use yours
+# Terminal 1 (the LAN / Tailscale IPs are examples, use yours)
 $D --state-dir dev-state init --san 192.168.1.50 --san 100.64.0.10
 $D --state-dir dev-state serve --listen 127.0.0.1:50051 --pair-listen 0.0.0.0:50052 --socket dev-state/dysd.sock
 
@@ -310,13 +316,8 @@ The GPU power limit stays at its last value until the next reboot; lighting keep
 
 ## Support
 
-Dysprosium is free and open source, with no ads and no tracking. If it is useful to you, you can
-support it via [GitHub Sponsors](https://github.com/sponsors/VLDG2712). The app has the same links
-in Settings → Support Dysprosium: optional, no reminders, nothing locked behind them.
-
-Build switches (app): `--dart-define=PAYPAL_ME=<handle>` adds a PayPal button;
-`--dart-define=DONATIONS=false` removes the section entirely, e.g. for a Google Play build (Play
-only allows donation links to validated charities).
+If Dysprosium is useful to you, you can [sponsor me on GitHub](https://github.com/sponsors/VLDG2712).
+There's also a link in the app's settings.
 
 ## License
 

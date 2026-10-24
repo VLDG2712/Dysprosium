@@ -1,0 +1,34 @@
+#!/bin/sh
+# /usr/lib/dysd/apply-updates: ExecStart of dysd-update.service (runs as root).
+# Upgrades repository packages with the distribution's package manager. Never AUR/PPAs-by-hand,
+# never anything interactive: on a question the upgrade fails instead of guessing.
+set -eu
+
+# DYSD_OS_RELEASE: tests only.
+# shellcheck source=/dev/null
+. "${DYSD_OS_RELEASE:-/etc/os-release}"
+ids=" ${ID:-} ${ID_LIKE:-} "
+
+case "$ids" in
+  *" arch "*|*" archarm "*|*" manjaro "*|*" endeavouros "*|*" cachyos "*)
+    exec pacman -Syu --noconfirm --noprogressbar --color never
+    ;;
+  *" debian "*|*" ubuntu "*|*" linuxmint "*|*" pop "*|*" raspbian "*)
+    export DEBIAN_FRONTEND=noninteractive
+    # Wait for apt-daily / unattended-upgrades instead of failing on the lock.
+    lock="-o DPkg::Lock::Timeout=600"
+    # Keep locally changed config files; take new ones only where nothing was changed.
+    keep="-o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
+    # shellcheck disable=SC2086
+    apt-get $lock -q update
+    # shellcheck disable=SC2086
+    exec apt-get $lock $keep -q -y full-upgrade
+    ;;
+  *" fedora "*|*" rhel "*|*" centos "*|*" nobara "*)
+    exec dnf -y upgrade
+    ;;
+  *)
+    echo "dysd: unsupported distribution '${ID:-?}' (knows pacman, apt, dnf)" >&2
+    exit 2
+    ;;
+esac

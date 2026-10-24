@@ -7,8 +7,8 @@ Pure-Dart core of the phone app (no Flutter), so it can be tested on the PC.
 - `pair()`: races all QR hosts with a TLS probe that pins the server leaf (`sfp`), then sends
   `Pair(token, name, csr)` once to the winner. The token never leaves the phone unless the pin matched.
 - `DysClient`: mTLS client for the main listener (trusts only the dysd CA), re-races hosts after
-  a connection failure. Calls: `ping`, `isOnLan` (dysd's view of the connection), `getGpu`,
-  `setGpuPowerLimit` (0 = default), `rebootToWindows`, `checkUpdates`, `applyUpdates`, `updateStatus`.
+  a connection failure. One method per RPC in `proto/dys/v1/dys.proto` (`ping`, `getStats`,
+  `checkUpdates`, `power`, ...).
 - Errors surface as `DysException` with a `DysErrorKind` (unreachable, notAuthorized, forbidden, …).
 
 ```fish
@@ -20,8 +20,7 @@ dart run dys_client ping /tmp/phone.json
 ```
 
 The e2e tests start their own dysd on `127.0.0.2` with a temp state dir, so they don't touch
-`/var/lib/dysd`. dysd gets `test/fakebin` first in its `PATH` (fake `nvidia-smi`, `systemctl`,
-`checkupdates`, `yay`) and `DYSD_LOG_DIR` pointing into the temp dir, so the GPU/update/reboot
+`/var/lib/dysd`. dysd gets `test/fakebin` first in its `PATH` (see `test/fakebin/README.md`) and `DYSD_LOG_DIR` pointing into the temp dir, so the GPU/update/reboot
 tests never touch the real system.
 
 Regenerate stubs after changing `proto/`: `tool/gen.sh` (protoc + protoc_plugin).

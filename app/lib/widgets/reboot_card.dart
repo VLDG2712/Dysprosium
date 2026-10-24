@@ -71,7 +71,7 @@ class _PowerCardState extends State<PowerCard> {
       _Act.sleep => ('Put $n to sleep?', 'Suspends to RAM. Wake it with Wake PC or the keyboard.', 'Sleep'),
       _Act.windows => (
           'Reboot $n into Windows?',
-          'The PC restarts immediately. Unsaved work on it is lost. Windows boots once; the next reboot goes back to Arch.',
+          'The PC restarts immediately. Unsaved work on it is lost. Windows boots once; the next reboot goes back to Linux.',
           'Reboot'
         ),
     };

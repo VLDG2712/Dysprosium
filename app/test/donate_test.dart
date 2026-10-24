@@ -44,7 +44,7 @@ void main() {
       ),
     );
     expect(find.text('Support Dysprosium'), findsOneWidget);
-    expect(find.textContaining('no ads'), findsOneWidget);
+    expect(find.textContaining('chip in'), findsOneWidget);
     await t.tap(find.byKey(const ValueKey('donate-paypal')));
     await t.pumpAndSettle();
     expect(opened.single.toString(), 'https://paypal.me/someone');

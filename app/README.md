@@ -2,11 +2,19 @@
 
 Flutter UI on top of [`packages/dys_client`](../packages/dys_client).
 
-- Pair: scan the `dys pair` QR code (or paste the link), name the phone; key stays in
-  `flutter_secure_storage`.
-- Home: ping (shows host and whether dysd sees the phone as LAN or away), GPU power-limit slider,
-  pending repo/AUR updates with repo upgrade (home network only) and live log, reboot to Windows.
-- Forget this PC: deletes the key on the phone. Revoke it on the PC too: `dys clients revoke <fp-prefix>`.
+Pair by scanning the QR code from `dys pair` (or pasting the link). The phone's key stays in
+`flutter_secure_storage`.
+
+Default tabs (rearrange them in Settings → Edit tabs and cards):
+
+- Home: PC status (and Wake PC through Home Assistant when it's off), profiles, power.
+- Stats: live CPU/RAM/GPU/disks/network; tap CPU, RAM or GPU for details and top processes.
+- Hardware: cooling (nzxt-ctl), GPU power limit.
+- Lighting: OpenRGB colours, modes and software effects.
+- System: PC info, Minecraft, updates, alerts, Wake-on-LAN setup, this phone / pairing.
+
+"Forget this PC" only deletes the key on the phone. Revoke it on the PC too:
+`dys clients revoke <fp-prefix>`.
 
 ```fish
 cd app
@@ -15,7 +23,12 @@ flutter test
 flutter run --release          # phone connected via USB / wireless ADB
 ```
 
-Notes
+Build options:
+- `--dart-define=PAYPAL_ME=<handle>` adds a PayPal button to Settings → Support Dysprosium.
+- `--dart-define=DONATIONS=false` removes that section, e.g. for Google Play (Play only allows
+  donation links to registered charities).
+
+Notes:
 - Release builds are signed with the debug key (fine for sideloading; needs a real key before
   publishing anywhere).
 - Pairing needs the phone to reach one of the hosts in the QR (LAN IP / Tailscale IP / MagicDNS).

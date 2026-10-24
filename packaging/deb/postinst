@@ -1,0 +1,25 @@
+#!/bin/sh
+# dysprosium postinst: create the dysd user / dys group and log dir, reload units.
+# The service is not enabled automatically: the server certificate needs this PC's addresses first
+# (see the message below / README "Install as a service").
+set -e
+if [ "$1" = configure ]; then
+    systemd-sysusers dysd.conf || true
+    systemd-tmpfiles --create dysd.conf || true
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload || true
+        # Upgrade: pick up the new binary if it was running.
+        systemctl try-restart dysd.service || true
+    fi
+    if [ -z "$2" ]; then
+        cat <<'MSG'
+==> Dysprosium installed. Next steps:
+      sudo usermod -aG dys "$USER"            # then log out/in (lets you use `dys`)
+      sudo systemctl enable --now dysd
+      sudo -u dysd dysd --state-dir /var/lib/dysd init --san <lan-ip> --san <tailscale-ip>
+      sudo systemctl restart dysd; sudo dys ping; dys pair
+    Optional settings: /usr/share/doc/dysprosium/dysd.toml.example -> /etc/dysd/dysd.toml
+MSG
+    fi
+fi
+exit 0

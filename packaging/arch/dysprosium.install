@@ -1,0 +1,20 @@
+post_install() {
+    cat <<'MSG'
+==> Dysprosium installed. Next steps:
+      sudo usermod -aG dys "$USER"            # then log out/in (lets you use `dys`)
+      sudo systemctl enable --now dysd
+      sudo -u dysd dysd --state-dir /var/lib/dysd init --san <lan-ip> --san <tailscale-ip>
+      sudo systemctl restart dysd; sudo dys ping; dys pair
+    Optional settings: /usr/share/doc/dysprosium/dysd.toml.example -> /etc/dysd/dysd.toml
+MSG
+}
+
+post_upgrade() {
+    if systemctl is-active --quiet dysd.service; then
+        echo '==> Restart dysd to run the new version: sudo systemctl restart dysd'
+    fi
+}
+
+pre_remove() {
+    systemctl disable --now dysd.service 2>/dev/null || true
+}

@@ -11,7 +11,7 @@ c.set_solid(id, Rgb::new(255, 0, 128)).await?;
 c.set_mode(id, 2, &ModeSettings { speed: Some(3), ..Default::default() }).await?;
 ```
 
-## What it does (and why)
+## What it does
 
 - Handshake, controller list (unique ids), `UPDATELEDS` / `UPDATEZONELEDS` / `UPDATESINGLELED` /
   `UPDATEMODE` / `SETCUSTOMMODE`. High level: `set_solid`, `set_off`, `set_mode`.
@@ -29,5 +29,5 @@ editing, TLS (the SDK has none; keep it on localhost).
 ## Tests
 
 `cargo test -p dys-openrgb`: parser against hand-assembled spec bytes, plus an in-process mock server
-(feature `mock`, also used by dysd's tests) that reproduces the quirks above. **Not yet run against a real
-OpenRGB**; do that before relying on it (`dys rgb`).
+(feature `mock`, also used by dysd's tests) that reproduces the quirks above. In real use it runs against
+OpenRGB 1.0 through dysd.
