@@ -18,6 +18,9 @@ optdepends=(
   'nzxt-ctl-git: pump/fan control'
 )
 install=dysprosium.install
+# makepkg's default LTO compiles ring's C code into GCC LTO objects that the Rust linker can't
+# read ("undefined symbol: ring_core_...").
+options=('!lto')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
