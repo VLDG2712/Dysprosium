@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show SecurityContext;
 
 import 'package:grpc/grpc.dart';
@@ -48,7 +49,7 @@ class DysClient {
       // Only connection-level problems warrant re-racing the hosts.
       if (const {DysErrorKind.unreachable, DysErrorKind.timeout, DysErrorKind.notAuthorized, DysErrorKind.other}
           .contains(err.kind)) {
-        await _reset();
+        await _reset(broken: true);
       }
       throw err;
     }
@@ -154,7 +155,7 @@ class DysClient {
       s = await _connect();
     } catch (e) {
       final err = DysException.from(e, pairing: false);
-      await _reset();
+      await _reset(broken: true);
       throw err;
     }
     try {
@@ -163,7 +164,7 @@ class DysClient {
       final err = DysException.from(e, pairing: false);
       if (const {DysErrorKind.unreachable, DysErrorKind.timeout, DysErrorKind.notAuthorized, DysErrorKind.other}
           .contains(err.kind)) {
-        await _reset();
+        await _reset(broken: true);
       }
       throw err;
     }
@@ -230,13 +231,21 @@ class DysClient {
   Future<pb.SystemInfo> getInfo({bool refresh = false}) =>
       _call((s, o) => s.getInfo(pb.GetInfoRequest(refresh: refresh), options: o), timeout: const Duration(seconds: 20));
 
-  Future<void> _reset() async {
+  /// [broken]: the connection just failed, so drop it instead of closing it politely. A peer that
+  /// rejected our certificate after the TLS 1.3 handshake may never answer the HTTP/2 GOAWAY, and
+  /// a graceful shutdown would then wait forever (grpc-dart#841). Never waits more than 2 s.
+  Future<void> _reset({bool broken = false}) async {
     final ch = _channel;
     _channel = null;
     _system = null;
     _host = null;
     _onLan = null;
-    await ch?.shutdown();
+    if (ch == null) return;
+    try {
+      await (broken ? ch.terminate() : ch.shutdown()).timeout(const Duration(seconds: 2));
+    } on TimeoutException {
+      unawaited(ch.terminate().catchError((_) {}));
+    }
   }
 
   Future<void> close() => _reset();

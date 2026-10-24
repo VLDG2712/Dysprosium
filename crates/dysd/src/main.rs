@@ -1,6 +1,7 @@
 use std::net::{Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand};
@@ -10,6 +11,9 @@ use dysd::{local, server};
 use tokio::signal::unix::{SignalKind, signal};
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
+
+/// How long open connections get after SIGTERM before dysd exits anyway.
+const SHUTDOWN_GRACE: Duration = Duration::from_secs(5);
 
 #[derive(Parser)]
 #[command(name = "dysd", version, about = "Dysprosium daemon")]
@@ -58,7 +62,9 @@ enum Cmd {
 enum ClientsCmd {
     List,
     /// Revoke by fingerprint (or unique prefix, min 8 chars). Send SIGHUP to a running dysd.
-    Revoke { fingerprint: String },
+    Revoke {
+        fingerprint: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -82,11 +88,21 @@ fn main() -> Result<()> {
             println!("if dysd is running, restart it to load the new server certificate");
             Ok(())
         }
-        Cmd::Serve { listen, pair_listen, socket } => {
+        Cmd::Serve {
+            listen,
+            pair_listen,
+            socket,
+        } => {
             let socket = socket
-                .or_else(|| std::env::var_os("RUNTIME_DIRECTORY").map(|d| PathBuf::from(d).join("dysd.sock")))
+                .or_else(|| {
+                    std::env::var_os("RUNTIME_DIRECTORY")
+                        .map(|d| PathBuf::from(d).join("dysd.sock"))
+                })
                 .unwrap_or_else(|| PathBuf::from(local::DEFAULT_SOCKET));
-            let cfg = Config { main_port: listen.port(), pair_listen };
+            let cfg = Config {
+                main_port: listen.port(),
+                pair_listen,
+            };
             tokio::runtime::Runtime::new()?.block_on(serve(state, listen, socket, cfg))
         }
         Cmd::DevClient { name, out } => dev_client(&state, &name, &out),
@@ -174,17 +190,37 @@ async fn serve(state: StateDir, listen: SocketAddr, socket: PathBuf, cfg: Config
         tokio::spawn(async move { actions.reapply_saved_gpu_limit().await });
     }
     // Saved lighting: reapplied on every new OpenRGB connection; changes written shortly after.
-    d.actions.rgb().spawn_keeper(dysd::rgb::KeeperTiming::default());
+    d.actions
+        .rgb()
+        .spawn_keeper(dysd::rgb::KeeperTiming::default());
     d.actions.rgb().spawn_flusher();
     // Push alerts through ntfy ([alerts] in dysd.toml).
     tokio::spawn(d.actions.alerter().clone().run(d.actions.clone()));
 
     let tcp = server::bind(listen).await?;
     let uds = local::bind(&socket)?;
-    tokio::try_join!(
-        server::serve(tcp, tls, d.allowlist.clone(), d.actions.clone(), cancel.clone().cancelled_owned()),
-        local::serve(uds, socket, d.clone(), cancel.clone().cancelled_owned()),
-    )?;
+    let serve = async {
+        tokio::try_join!(
+            server::serve(
+                tcp,
+                tls,
+                d.allowlist.clone(),
+                d.actions.clone(),
+                cancel.clone().cancelled_owned()
+            ),
+            local::serve(uds, socket, d.clone(), cancel.clone().cancelled_owned()),
+        )
+    };
+    // Graceful shutdown waits for every connection to close. A phone watching stats, or a client
+    // that never answers GOAWAY, would hold dysd until systemd kills it (and skip the flush below).
+    let grace = async {
+        cancel.cancelled().await;
+        tokio::time::sleep(SHUTDOWN_GRACE).await;
+    };
+    tokio::select! {
+        r = serve => { r?; }
+        () = grace => warn!("connections still open {}s after shutdown started, closing them", SHUTDOWN_GRACE.as_secs()),
+    }
     d.actions.rgb().flush();
     Ok(())
 }

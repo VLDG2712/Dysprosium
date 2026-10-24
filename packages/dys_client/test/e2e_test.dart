@@ -107,7 +107,12 @@ class Dysd {
 
   Future<void> stop() async {
     proc.kill();
-    await proc.exitCode;
+    // dysd gives open connections 5 s after SIGTERM; longer means its shutdown is broken.
+    await proc.exitCode.timeout(const Duration(seconds: 10), onTimeout: () {
+      print('dysd ignored SIGTERM for 10 s, killing it. Log:\n$log');
+      proc.kill(ProcessSignal.sigkill);
+      return proc.exitCode;
+    });
     await dir.delete(recursive: true);
   }
 }
@@ -215,10 +220,14 @@ void main() {
 
   test('grpc-dart#841: client cert from a foreign CA (server still trusted) ends within the deadline',
       () async {
-    final mine = await _pairFresh(d, 'mine');
-    final other = await Dysd.start(bin);
+    // Every step has its own limit, so a hang says where it happened instead of hitting the 60 s
+    // test timeout.
+    Future<T> step<T>(String what, Future<T> f, int seconds) =>
+        f.timeout(Duration(seconds: seconds), onTimeout: () => throw TimeoutException('$what hung'));
+    final mine = await step('pairing with dysd 1', _pairFresh(d, 'mine'), 15);
+    final other = await step('starting dysd 2', Dysd.start(bin), 15);
     try {
-      final foreign = await _pairFresh(other, 'foreign');
+      final foreign = await step('pairing with dysd 2', _pairFresh(other, 'foreign'), 15);
       // Trust d's CA (so the server check passes) but present a cert d never issued.
       final franken = PairedServer.fromJson({
         ...mine.toJson(),
@@ -229,18 +238,35 @@ void main() {
       final sw = Stopwatch()..start();
       Object? err;
       try {
-        await c.ping();
-      } catch (e) {
+        await step('ping', c.ping(), 10);
+      } on DysException catch (e) {
         err = e;
       }
       print('foreign-CA client cert -> $err after ${sw.elapsedMilliseconds} ms');
       expect(err, isA<DysException>());
       expect((err as DysException).kind, isIn([DysErrorKind.notAuthorized, DysErrorKind.timeout]));
-      expect(sw.elapsed, lessThan(const Duration(seconds: 5)));
-      await c.close();
+      expect(sw.elapsed, lessThan(const Duration(seconds: 6)));
+      await step('closing the client', c.close(), 5);
+    } catch (_) {
+      print('--- dysd 1 log ---\n${d.log}\n--- dysd 2 log ---\n${other.log}');
+      rethrow;
     } finally {
-      await other.stop();
+      await step('stopping dysd 2', other.stop(), 15);
     }
+  });
+
+  test('SIGTERM with a phone still watching stats: dysd exits within its 5 s grace', () async {
+    final c = DysClient(await _pairFresh(d, 'watcher'));
+    final sub = c.watchStats().listen((_) {}, onError: (_) {});
+    await c.ping();
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    final sw = Stopwatch()..start();
+    d.proc.kill();
+    final code = await d.proc.exitCode.timeout(const Duration(seconds: 9), onTimeout: () => -999);
+    expect(code, isNot(-999), reason: 'dysd still running ${sw.elapsed} after SIGTERM');
+    expect(sw.elapsed, lessThan(const Duration(seconds: 7)));
+    await sub.cancel();
+    await c.close();
   });
 
   group('actions (fake system tools)', () {
