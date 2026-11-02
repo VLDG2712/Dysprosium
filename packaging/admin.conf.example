@@ -1,0 +1,24 @@
+# /etc/dysd/admin.conf: turns on the phone's Processes, Services and System settings tabs.
+#
+# While this file exists, a paired phone ON THE HOME NETWORK can end your own processes,
+# start/stop/enable/disable system services and change sysctls, CPU, power and time settings.
+# Away from home (Tailscale) the tabs are read-only. Delete the file to turn it all off again;
+# no restart needed. It must be owned by root and not group/world-writable:
+#   sudo install -m640 -o root -g dys /usr/share/doc/dysprosium/admin.conf.example /etc/dysd/admin.conf
+#
+# Built in and always protected (see /usr/lib/dysd/admin): getty/debug shells, rescue/emergency,
+# dbus, polkit, logind, journald, udevd, user@ sessions, dysd itself, power-off units, cryptsetup,
+# fsck; sysctls that run programs as root or can't be undone (kernel.core_pattern, kernel.modprobe,
+# kernel.modules_disabled, ...).
+#
+# More protection, one glob per line:
+#   deny-unit <glob>      e.g.  deny-unit sshd.service
+#   deny-sysctl <glob>    e.g.  deny-sysctl net.ipv4.*
+
+# Stopping these from the phone would cut the phone off (or the pump control), with no way back
+# except at the PC. Uncomment what applies:
+# deny-unit NetworkManager.service
+# deny-unit systemd-networkd.service
+# deny-unit tailscaled.service
+# deny-unit sshd.service
+# deny-unit nzxt-ctl.service

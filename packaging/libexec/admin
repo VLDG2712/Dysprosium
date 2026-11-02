@@ -1,0 +1,284 @@
+#!/bin/bash
+# /usr/lib/dysd/admin: run as root by dysd-admin@<request>.service, which polkit lets only the
+# dysd user start (50-dysd.rules). This script is the security boundary for the phone's
+# Processes / Services / System settings tabs. It trusts nothing in the request: dysd may be
+# compromised. Every check that matters is done here, again.
+#
+# Request (the unit instance, unescaped by systemd): "<id> <op> <args...>"
+#   <id> kill <pid> <start-ticks> TERM|KILL
+#   <id> unit start|stop|restart|reload|reset-failed|enable|disable|enable-now|disable-now <unit>
+#   <id> sysctl <key> now|boot|unpersist [value]
+#   <id> sysfs <setting> now|boot|unpersist [value]   setting: cpu-governor cpu-epp cpu-boost
+#                                                    thp-enabled thp-defrag io-<disk>
+#   <id> hostname <name> | timezone <zone> | ntp on|off | profile <name>
+# Result: /run/dysd-admin/<id>, first line "ok" or "error", then a message. The script always
+# exits 0 so failed requests don't pile up as failed units.
+#
+# Nothing works until /etc/dysd/admin.conf exists (root-owned, not group/world-writable): that
+# file is the opt-in, and its "deny-unit <glob>" / "deny-sysctl <glob>" lines add to the
+# built-in denylists below.
+#
+# DYSD_ADMIN_TEST_ROOT prefixes every path (tests only). Units started through systemd never
+# inherit the caller's environment, so dysd can't set it for the real thing.
+
+set -uo pipefail
+export LC_ALL=C
+R=${DYSD_ADMIN_TEST_ROOT:-}
+CONF=$R/etc/dysd/admin.conf
+RESULTS=$R/run/dysd-admin
+SYSCTL_FILE=$R/etc/sysctl.d/99-dysd.conf
+TMPFILES_FILE=$R/etc/tmpfiles.d/dysd-tuning.conf
+
+# Units that give a shell, power the machine off behind logind's back, or break the session or
+# dysd itself. Globs. dysd shows these as read-only (it parses this line, keep it on one line).
+BUILTIN_DENY_UNITS=(debug-shell.service '*getty*' 'autovt@*' 'rescue.*' 'emergency.*' 'systemd-nspawn@*' 'dbus*' 'polkit*' systemd-logind.service 'systemd-journald*' 'systemd-udevd*' 'user@*' 'user-runtime-dir@*' 'dysd*' 'modprobe@*' 'systemd-cryptsetup@*' 'systemd-fsck*' systemd-remount-fs.service systemd-poweroff.service systemd-reboot.service systemd-halt.service systemd-kexec.service systemd-soft-reboot.service 'systemd-suspend*' 'systemd-hibernate*' systemd-hybrid-sleep.service 'dbus-org.freedesktop.*')
+# Sysctls that run a program as root, can't be undone without a reboot, or open the kernel to
+# exploits. Globs on the dotted key. (dysd parses this line too.)
+BUILTIN_DENY_SYSCTLS=(kernel.core_pattern kernel.modprobe kernel.poweroff_cmd kernel.hotplug 'kernel.usermodehelper.*' kernel.modules_disabled kernel.kexec_load_disabled 'kernel.kexec_load_limit_*' kernel.unprivileged_bpf_disabled vm.mmap_min_addr)
+
+ID=""
+result() { # result ok|error message...
+    local status=$1; shift
+    [[ -n $ID ]] || exit 0
+    mkdir -p "$RESULTS"
+    local tmp
+    tmp=$(mktemp "$RESULTS/.tmp.XXXXXX") || exit 0
+    printf '%s\n%s\n' "$status" "$*" > "$tmp"
+    # Readable by dysd through the directory (root:dysd 0750).
+    chmod 0644 "$tmp"
+    mv -f "$tmp" "$RESULTS/$ID"
+    exit 0
+}
+fail() { result error "$@"; }
+
+# ---- request -------------------------------------------------------------------------------
+
+read -r ID OP A B C <<< "$*"
+[[ $ID =~ ^[0-9a-f]{12}$ ]] || { ID=""; echo "bad request id" >&2; exit 0; }
+# Old results (dysd reads them right away).
+find "$RESULTS" -maxdepth 1 -type f -mmin +10 -delete 2>/dev/null
+
+if [[ ! -f $CONF ]]; then
+    fail "admin features are off: create /etc/dysd/admin.conf to enable them"
+fi
+if [[ -z $R ]]; then
+    read -r owner mode < <(stat -c '%u %a' "$CONF")
+    [[ $owner == 0 && $(( 8#$mode & 8#022 )) == 0 ]] || fail "/etc/dysd/admin.conf must be owned by root and not group/world-writable"
+fi
+mapfile -t EXTRA_DENY_UNITS < <(awk '$1 == "deny-unit" && NF >= 2 { print $2 }' "$CONF")
+mapfile -t EXTRA_DENY_SYSCTLS < <(awk '$1 == "deny-sysctl" && NF >= 2 { print $2 }' "$CONF")
+
+matches_any() { # matches_any value glob...
+    local v=$1 g; shift
+    for g in "$@"; do
+        # shellcheck disable=SC2053  # glob match on purpose
+        [[ $v == $g ]] && return 0
+    done
+    return 1
+}
+
+# ---- kill: only processes running entirely as a regular user --------------------------------
+
+login_def() { awk -v k="$1" '$1 == k { print $2 }' "$R/etc/login.defs" 2>/dev/null | tail -n1; }
+
+op_kill() {
+    local pid=$A start=$B sig=$C
+    [[ $pid =~ ^[0-9]{1,10}$ && $pid -gt 1 ]] || fail "bad pid"
+    [[ $start =~ ^[0-9]{1,20}$ ]] || fail "bad start time"
+    [[ $sig == TERM || $sig == KILL ]] || fail "signal must be TERM or KILL"
+    local stat
+    stat=$(cat "$R/proc/$pid/stat" 2>/dev/null) || fail "process $pid is gone"
+    # The name (field 2) is in parentheses and may contain spaces and ')'; fields after it are fixed.
+    local rest=${stat##*) } f
+    read -r -a f <<< "$rest"
+    [[ ${f[19]:-} == "$start" ]] || fail "process $pid is gone (the PID now belongs to another process)"
+    local uid_min uid_max
+    uid_min=$(login_def UID_MIN); uid_max=$(login_def UID_MAX)
+    [[ $uid_min =~ ^[0-9]+$ ]] || uid_min=1000
+    [[ $uid_max =~ ^[0-9]+$ ]] || uid_max=60000
+    local uids
+    uids=$(awk '$1 == "Uid:" { print $2, $3, $4, $5 }' "$R/proc/$pid/status" 2>/dev/null) || true
+    [[ -n $uids ]] || fail "can't read process $pid"
+    local u
+    for u in $uids; do
+        (( u >= uid_min && u <= uid_max )) || fail "process $pid runs as a system user (uid $u): only your own processes can be ended here"
+    done
+    local name=${stat#*(}; name=${name%)*}
+    env kill -s "$sig" "$pid" 2>/dev/null || fail "kill $pid failed"
+    result ok "sent SIG$sig to $name ($pid)"
+}
+
+# ---- systemd units ---------------------------------------------------------------------------
+
+op_unit() {
+    local verb=$A unit=$B
+    [[ $unit =~ ^[A-Za-z0-9:_.@\\-]{1,200}\.(service|timer|socket|path)$ ]] || fail "not a service/timer/socket/path unit name: $unit"
+    local names=("$unit") id
+    # An alias (e.g. dbus-org.freedesktop.login1.service) must not get around the denylist.
+    id=$(systemctl show -p Id --value -- "$unit" 2>/dev/null) && [[ -n $id ]] && names+=("$id")
+    local n
+    for n in "${names[@]}"; do
+        if matches_any "$n" "${BUILTIN_DENY_UNITS[@]}" "${EXTRA_DENY_UNITS[@]}"; then
+            fail "$n is protected and can't be changed from the phone"
+        fi
+    done
+    local out
+    case $verb in
+        start|stop|restart|reload|reset-failed) out=$(systemctl "$verb" -- "$unit" 2>&1) ;;
+        enable|disable) out=$(systemctl "$verb" -- "$unit" 2>&1) ;;
+        enable-now) out=$(systemctl enable --now -- "$unit" 2>&1) ;;
+        disable-now) out=$(systemctl disable --now -- "$unit" 2>&1) ;;
+        *) fail "unknown unit action: $verb" ;;
+    esac || fail "systemctl $verb $unit: $(tail -n1 <<< "$out")"
+    result ok "$verb $unit: done"
+}
+
+# ---- persistence files -----------------------------------------------------------------------
+
+# rewrite_file FILE HEADER MATCH-FIELD-1 [NEW-LINE]: drops lines whose first field (after an
+# optional tmpfiles type) equals MATCH, appends NEW-LINE, keeps everything else.
+rewrite_file() {
+    local file=$1 header=$2 match=$3 new=${4:-}
+    mkdir -p "$(dirname "$file")"
+    local tmp
+    tmp=$(mktemp "$file.XXXXXX") || fail "can't write $file"
+    {
+        echo "$header"
+        if [[ -f $file ]]; then
+            awk -v m="$match" 'NR == 1 && /^# Managed by dysd/ { next }
+                { k = $1; if (k ~ /^w-?$/) k = $2; sub(/=.*/, "", k) } k == m { next } { print }' "$file"
+        fi
+        [[ -n $new ]] && echo "$new"
+    } > "$tmp"
+    chmod 0644 "$tmp"
+    mv -f "$tmp" "$file"
+    # Drop the file if only the header is left.
+    [[ $(grep -cv '^#' "$file") == 0 ]] && rm -f "$file"
+    return 0
+}
+
+# ---- sysctl ----------------------------------------------------------------------------------
+
+op_sysctl() {
+    local key=$A mode=$B value=${C:-}
+    [[ $key =~ ^[A-Za-z0-9_.@/-]{1,128}$ && $key != *..* && $key != /* ]] || fail "bad sysctl key: $key"
+    local path dotted
+    if [[ $key == */* ]]; then path=$key; dotted=${key//\//.}; else path=${key//.//}; dotted=$key; fi
+    if matches_any "$dotted" "${BUILTIN_DENY_SYSCTLS[@]}" "${EXTRA_DENY_SYSCTLS[@]}"; then
+        fail "$dotted is protected and can't be changed from the phone"
+    fi
+    local base real
+    base=$(realpath -e -- "$R/proc/sys") || fail "no /proc/sys"
+    real=$(realpath -e -- "$base/$path" 2>/dev/null) || fail "no such sysctl: $dotted"
+    [[ $real == "$base/"* && -f $real ]] || fail "no such sysctl: $dotted"
+    case $mode in
+        unpersist)
+            rewrite_file "$SYSCTL_FILE" "# Managed by dysd (phone: System settings). Edit with care." "$dotted"
+            result ok "$dotted: no longer set at boot" ;;
+        now|boot) ;;
+        *) fail "bad mode: $mode" ;;
+    esac
+    [[ -n $value && ${#value} -le 128 && $value =~ ^[[:print:]]+$ ]] || fail "bad value"
+    # One-way setting: ptrace_scope 3 can't be lowered again without a reboot.
+    [[ $dotted == kernel.yama.ptrace_scope && $value == 3 ]] && fail "ptrace_scope 3 can't be undone without a reboot"
+    printf '%s\n' "$value" > "$real" 2>/dev/null || fail "$dotted: the kernel refused $value"
+    if [[ $mode == boot ]]; then
+        rewrite_file "$SYSCTL_FILE" "# Managed by dysd (phone: System settings). Edit with care." "$dotted" "$dotted = $value"
+        result ok "$dotted = $value (also at boot)"
+    fi
+    result ok "$dotted = $value"
+}
+
+# ---- sysfs: CPU frequency, transparent hugepages, I/O scheduler ------------------------------
+
+# Choices from "a b [c] d" (THP, scheduler) or "a b c" (governors, EPP); the [x] is the current one.
+choices_of() { tr -d '[]' < "$1" | tr ' ' '\n' | grep -v '^$'; }
+
+op_sysfs() {
+    local setting=$A mode=$B value=${C:-} files=() glob choices_file inverted=0
+    local cpu=$R/sys/devices/system/cpu
+    case $setting in
+        cpu-governor) glob='/sys/devices/system/cpu/cpufreq/policy*/scaling_governor'
+            choices_file=$cpu/cpufreq/policy0/scaling_available_governors ;;
+        cpu-epp) glob='/sys/devices/system/cpu/cpufreq/policy*/energy_performance_preference'
+            choices_file=$cpu/cpufreq/policy0/energy_performance_available_preferences ;;
+        cpu-boost)
+            if [[ -f $cpu/intel_pstate/no_turbo ]]; then glob=/sys/devices/system/cpu/intel_pstate/no_turbo; inverted=1
+            else glob=/sys/devices/system/cpu/cpufreq/boost; fi ;;
+        thp-enabled) glob=/sys/kernel/mm/transparent_hugepage/enabled; choices_file=$R$glob ;;
+        thp-defrag) glob=/sys/kernel/mm/transparent_hugepage/defrag; choices_file=$R$glob ;;
+        io-*) local disk=${setting#io-}
+            [[ $disk =~ ^[a-z0-9]{1,32}$ ]] || fail "bad disk name"
+            glob=/sys/block/$disk/queue/scheduler; choices_file=$R$glob ;;
+        *) fail "unknown setting: $setting" ;;
+    esac
+    case $mode in
+        unpersist)
+            rewrite_file "$TMPFILES_FILE" "# Managed by dysd (phone: System settings): applied at boot by systemd-tmpfiles." "$glob"
+            result ok "$setting: no longer set at boot" ;;
+        now|boot) ;;
+        *) fail "bad mode: $mode" ;;
+    esac
+    local write=$value
+    if [[ $setting == cpu-boost ]]; then
+        [[ $value == on || $value == off ]] || fail "boost must be on or off"
+        if (( inverted )); then [[ $value == on ]] && write=0 || write=1
+        else [[ $value == on ]] && write=1 || write=0; fi
+    else
+        [[ -f ${choices_file:-} ]] || fail "$setting isn't available on this PC"
+        choices_of "$choices_file" | grep -qxF -- "$value" || fail "$setting: '$value' isn't one of: $(choices_of "$choices_file" | tr '\n' ' ')"
+    fi
+    local f
+    for f in $R$glob; do [[ -f $f ]] && files+=("$f"); done
+    (( ${#files[@]} )) || fail "$setting isn't available on this PC"
+    for f in "${files[@]}"; do
+        printf '%s\n' "$write" > "$f" 2>/dev/null || fail "$setting: the kernel refused '$value' (another tool, e.g. power-profiles-daemon, may control it)"
+    done
+    if [[ $mode == boot ]]; then
+        rewrite_file "$TMPFILES_FILE" "# Managed by dysd (phone: System settings): applied at boot by systemd-tmpfiles." "$glob" "w- $glob - - - - $write"
+        result ok "$setting = $value (also at boot)"
+    fi
+    result ok "$setting = $value"
+}
+
+# ---- hostname, time, power profile -----------------------------------------------------------
+
+op_hostname() {
+    [[ $A =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]] || fail "hostname: lowercase letters, digits and '-', up to 63"
+    hostnamectl set-hostname "$A" 2>/dev/null || fail "hostnamectl failed"
+    result ok "hostname = $A"
+}
+
+op_timezone() {
+    [[ $A =~ ^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$ && -f $R/usr/share/zoneinfo/$A ]] || fail "unknown time zone: $A"
+    timedatectl set-timezone "$A" 2>/dev/null || fail "timedatectl failed"
+    result ok "time zone = $A"
+}
+
+op_ntp() {
+    case $A in on) v=true ;; off) v=false ;; *) fail "ntp must be on or off" ;; esac
+    timedatectl set-ntp "$v" 2>/dev/null || fail "timedatectl set-ntp failed (no NTP service installed?)"
+    result ok "network time $A"
+}
+
+op_profile() {
+    [[ $A =~ ^[a-z-]{1,32}$ ]] || fail "bad profile name"
+    busctl set-property org.freedesktop.UPower.PowerProfiles /org/freedesktop/UPower/PowerProfiles \
+        org.freedesktop.UPower.PowerProfiles ActiveProfile s "$A" 2>/dev/null ||
+    busctl set-property net.hadess.PowerProfiles /net/hadess/PowerProfiles \
+        net.hadess.PowerProfiles ActiveProfile s "$A" 2>/dev/null ||
+        fail "couldn't set power profile $A (power-profiles-daemon / tuned-ppd not running?)"
+    result ok "power profile = $A"
+}
+
+case $OP in
+    kill) op_kill ;;
+    unit) op_unit ;;
+    sysctl) op_sysctl ;;
+    sysfs) op_sysfs ;;
+    hostname) op_hostname ;;
+    timezone) op_timezone ;;
+    ntp) op_ntp ;;
+    profile) op_profile ;;
+    *) fail "unknown request: $OP" ;;
+esac

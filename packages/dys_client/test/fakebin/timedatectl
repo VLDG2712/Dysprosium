@@ -1,0 +1,5 @@
+#!/bin/bash
+# Fake timedatectl: time zone list for dysd, set-* from the admin script (recorded only).
+echo "timedatectl $*" >> "$FAKE_STATE/calls"
+[[ $1 == list-timezones ]] && printf '%s\n' Europe/Berlin Europe/Bucharest UTC
+exit 0

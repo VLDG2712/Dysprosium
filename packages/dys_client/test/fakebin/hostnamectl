@@ -1,0 +1,3 @@
+#!/bin/bash
+# Fake hostnamectl for the admin script (recorded only).
+echo "hostnamectl $*" >> "$FAKE_STATE/calls"

@@ -1,0 +1,3 @@
+#!/bin/bash
+# Fake kill for the admin script (it runs `env kill -s SIG PID`): records, never signals.
+echo "kill $*" >> "$FAKE_STATE/calls"
