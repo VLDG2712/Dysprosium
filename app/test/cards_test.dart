@@ -83,6 +83,126 @@ class FakeClient extends DysClient {
       InfoSection(title: 'CPU', icon: 'cpu', items: [InfoItem(label: 'Model', value: 'Intel(R) Core(TM) i7-14700KF')]),
     ]);
   }
+  // ---- processes, services, settings --------------------------------------------------------
+  var access = AdminAccess(enabled: true, canChange: true);
+  var processes = <ProcessInfo>[
+    ProcessInfo(pid: 4512, name: 'steam', user: 'vldg', uid: 1000, cpuPct: 23.5, rss: Int64(900 << 20), killable: true,
+        startTicks: Int64(777), unit: 'app-steam@1.scope', cmdline: '/usr/bin/steam -silent', state: 'S', threads: 80),
+    ProcessInfo(pid: 900, name: 'java', user: 'minecraft', uid: 961, cpuPct: 40.1, rss: Int64(8 << 30), unit: 'atm10.service'),
+    ProcessInfo(pid: 2, name: 'kthreadd', user: 'root', kernelThread: true),
+    ProcessInfo(pid: 3000, name: 'firefox', user: 'vldg', uid: 1000, cpuPct: 3, rss: Int64(2 << 30), killable: true),
+  ];
+  Object? adminError;
+  @override
+  Future<ProcessList> listProcesses() async {
+    calls.add('processes');
+    return ProcessList(access: access, processes: processes);
+  }
+
+  @override
+  Future<String> signalProcess(int pid, Int64 startTicks, SignalProcessRequest_Signal signal) async {
+    calls.add('signal $pid $startTicks ${signal.name}');
+    if (adminError != null) throw adminError!;
+    processes.removeWhere((p) => p.pid == pid);
+    return 'sent SIG${signal.name} to process ($pid)';
+  }
+
+  var services = <ServiceInfo>[
+    ServiceInfo(name: 'atm10.service', description: 'ATM10 server', activeState: 'active', subState: 'running', fileState: 'enabled'),
+    ServiceInfo(name: 'cups.service', description: 'Printing', activeState: 'inactive', subState: 'dead', fileState: 'disabled'),
+    ServiceInfo(name: 'backup.service', description: 'Nightly backup', activeState: 'failed', subState: 'failed', fileState: 'static'),
+    ServiceInfo(name: 'getty@tty1.service', description: 'Getty on tty1', activeState: 'active', subState: 'running', fileState: 'enabled', protected: true),
+    ServiceInfo(name: 'apt-daily.timer', description: 'Daily apt', activeState: 'active', subState: 'waiting', fileState: 'enabled'),
+  ];
+  @override
+  Future<ServiceList> listServices() async {
+    calls.add('services');
+    return ServiceList(access: access, services: services);
+  }
+
+  ServiceDetail _detail(String name, [String message = '']) {
+    final i = services.firstWhere((s) => s.name == name);
+    return ServiceDetail(access: access, info: i, statusText: '● $name - ${i.description}\n   Active: ${i.activeState}', mainPid: 42, message: message);
+  }
+
+  @override
+  Future<ServiceDetail> getService(String name, {int logLines = 30}) async {
+    calls.add('service $name');
+    return _detail(name);
+  }
+
+  @override
+  Future<ServiceDetail> controlService(String name, ControlServiceRequest_Action action, {bool now = false}) async {
+    calls.add('control $name ${action.name}${now ? ' now' : ''}');
+    if (adminError != null) throw adminError!;
+    final i = services.indexWhere((s) => s.name == name);
+    final s = ServiceInfo.fromBuffer(services[i].writeToBuffer());
+    switch (action) {
+      case ControlServiceRequest_Action.STOP:
+        s.activeState = 'inactive';
+      case ControlServiceRequest_Action.START || ControlServiceRequest_Action.RESTART:
+        s.activeState = 'active';
+      case ControlServiceRequest_Action.ENABLE:
+        s.fileState = 'enabled';
+        if (now) s.activeState = 'active';
+      case ControlServiceRequest_Action.DISABLE:
+        s.fileState = 'disabled';
+        if (now) s.activeState = 'inactive';
+      default:
+    }
+    services[i] = s;
+    return _detail(name, '${action.name.toLowerCase()} $name: done');
+  }
+
+  var settings = <SettingGroup>[
+    SettingGroup(id: 'cpu', title: 'CPU & power', icon: 'cpu', settings: [
+      Setting(id: 'power:profile', title: 'Power profile', kind: Setting_Kind.CHOICE, value: 'balanced', choices: ['power-saver', 'balanced', 'performance'], writable: true),
+      Setting(id: 'cpu:boost', title: 'Turbo boost', kind: Setting_Kind.BOOL, value: 'on', onValue: 'on', offValue: 'off', writable: true, canPersist: true),
+    ]),
+    SettingGroup(id: 'memory', title: 'Memory', icon: 'memory', settings: [
+      Setting(id: 'sysctl:vm.swappiness', title: 'Swappiness', description: 'How readily the kernel swaps.', kind: Setting_Kind.INT, value: '60', min: Int64(0), max: Int64(200), writable: true, canPersist: true),
+    ]),
+    SettingGroup(id: 'custom', title: 'Other sysctls', icon: 'custom', settings: [
+      Setting(id: 'sysctl:kernel.core_pattern', title: 'kernel.core_pattern', kind: Setting_Kind.TEXT, value: 'core', writable: false, note: 'Protected: can\'t be changed from the phone'),
+    ]),
+  ];
+
+  @override
+  Future<SystemSettings> getSystemSettings({bool allSysctl = false, List<String> sysctlKeys = const []}) async {
+    calls.add('settings${allSysctl ? ' all' : ''}${sysctlKeys.isEmpty ? '' : ' $sysctlKeys'}');
+    final groups = [...settings];
+    if (sysctlKeys.contains('net.ipv4.tcp_fin_timeout')) {
+      groups.add(SettingGroup(id: 'custom2', title: 'Asked for', settings: [
+        Setting(id: 'sysctl:net.ipv4.tcp_fin_timeout', title: 'net.ipv4.tcp_fin_timeout', kind: Setting_Kind.TEXT, value: '60', writable: true, canPersist: true),
+      ]));
+    }
+    return SystemSettings(access: access, groups: groups);
+  }
+
+  @override
+  Future<SystemSettings> setSystemSetting(String id, String value, {bool persist = false, bool restore = false}) async {
+    calls.add('set $id=$value${persist ? ' persist' : ''}${restore ? ' restore' : ''}');
+    if (adminError != null) throw adminError!;
+    for (final g in settings) {
+      for (var i = 0; i < g.settings.length; i++) {
+        final x = g.settings[i];
+        if (x.id != id) continue;
+        final n = Setting.fromBuffer(x.writeToBuffer());
+        if (restore) {
+          n.value = n.original;
+          n.original = '';
+          n.persistent = false;
+        } else {
+          if (n.original.isEmpty) n.original = n.value;
+          n.value = value;
+          n.persistent = persist;
+        }
+        g.settings[i] = n;
+      }
+    }
+    return SystemSettings(access: access, groups: settings, message: '$id = $value');
+  }
+
   @override
   Future<GpuInfo> getGpu() async => gpu;
   @override

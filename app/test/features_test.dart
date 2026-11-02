@@ -398,6 +398,8 @@ void main() {
       await t.tap(find.text('System'));
       await t.pumpAndSettle();
       expect(c.statsCtl!.hasListener, isFalse, reason: 'stats stop when their tab is left');
+      expect(find.text('Services'), findsOneWidget, reason: 'new cards at the top of System');
+      await t.scrollUntilVisible(find.text('atm10.service: active'), 300, scrollable: _visibleScrollable);
       expect(find.text('atm10.service: active'), findsOneWidget);
       await t.scrollUntilVisible(find.text('Send test alert'), 300, scrollable: _visibleScrollable);
       expect(find.text('Send test alert'), findsOneWidget);

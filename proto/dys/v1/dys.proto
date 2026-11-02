@@ -72,6 +72,21 @@ service System {
   // titled sections of label/value pairs, so the phone can show new items without an update.
   // Cached for 60 s unless `refresh`.
   rpc GetInfo(GetInfoRequest) returns (SystemInfo);
+
+  // Processes, services and system settings. Reading works everywhere and needs no privileges.
+  // Changes need /etc/dysd/admin.conf (the opt-in), a LAN address or the local socket, and go
+  // through dysd-admin@<request>.service: a root script (/usr/lib/dysd/admin) that re-checks every
+  // request (only regular users' processes, unit and sysctl denylists).
+  rpc ListProcesses(ListProcessesRequest) returns (ProcessList);
+  rpc SignalProcess(SignalProcessRequest) returns (AdminReply);
+  // System services, timers, sockets and paths (not user units).
+  rpc ListServices(ListServicesRequest) returns (ServiceList);
+  rpc GetService(GetServiceRequest) returns (ServiceDetail);
+  rpc ControlService(ControlServiceRequest) returns (ServiceDetail);
+  // sysctls (a curated list plus any key), CPU frequency, transparent hugepages, I/O schedulers,
+  // power profile, hostname, time zone and NTP, as generic settings the phone renders as-is.
+  rpc GetSystemSettings(GetSystemSettingsRequest) returns (SystemSettings);
+  rpc SetSystemSetting(SetSystemSettingRequest) returns (SystemSettings);
 }
 
 message PingRequest {}
@@ -636,4 +651,172 @@ message RevokeClientRequest {
 
 message RevokeClientReply {
   ClientInfo revoked = 1;
+}
+
+// ---- processes, services, system settings ----------------------------------------------------
+
+message AdminAccess {
+  // /etc/dysd/admin.conf exists.
+  bool enabled = 1;
+  // Enabled and this caller is on the LAN (or the local socket).
+  bool can_change = 2;
+  // Why not, for the phone to show. Empty when can_change.
+  string reason = 3;
+}
+
+message AdminReply {
+  string message = 1;
+}
+
+message ListProcessesRequest {}
+
+message ProcessList {
+  AdminAccess access = 1;
+  repeated ProcessInfo processes = 2;
+}
+
+message ProcessInfo {
+  uint32 pid = 1;
+  uint32 ppid = 2;
+  string name = 3;
+  string cmdline = 4; // arguments joined with spaces; empty for kernel threads
+  uint32 uid = 5;
+  string user = 6;
+  string state = 7; // R running, S sleeping, D disk wait, Z zombie, T stopped, I idle
+  float cpu_pct = 8; // share of the whole CPU (all cores = 100), over ~0.5 s
+  uint64 rss = 9; // bytes
+  uint32 threads = 10;
+  // /proc/<pid>/stat field 22. Sent back with SignalProcess so a reused PID is never hit.
+  uint64 start_ticks = 11;
+  uint64 started_unix = 12;
+  // Runs entirely as a regular user (not root/system), so it may be ended from the phone.
+  bool killable = 13;
+  string unit = 14; // systemd unit from /proc/<pid>/cgroup, e.g. app-firefox@1234.scope, atm10.service
+  bool kernel_thread = 15;
+}
+
+message SignalProcessRequest {
+  enum Signal {
+    SIGNAL_UNSPECIFIED = 0;
+    TERM = 1; // ask it to quit
+    KILL = 2; // force
+  }
+  uint32 pid = 1;
+  uint64 start_ticks = 2;
+  Signal signal = 3;
+}
+
+message ListServicesRequest {}
+
+message ServiceList {
+  AdminAccess access = 1;
+  repeated ServiceInfo services = 2;
+}
+
+message ServiceInfo {
+  string name = 1; // e.g. atm10.service
+  string description = 2;
+  string load_state = 3; // loaded, not-found, masked, ...
+  string active_state = 4; // active, inactive, failed, activating, deactivating, reloading
+  string sub_state = 5; // running, exited, dead, waiting, listening, ...
+  string file_state = 6; // enabled, disabled, static, masked, indirect, generated, ...
+  // On a denylist (built in or /etc/dysd/admin.conf): shown, never changed.
+  bool protected = 7;
+}
+
+message GetServiceRequest {
+  string name = 1;
+  uint32 log_lines = 2; // 0 = 30
+}
+
+message ServiceDetail {
+  AdminAccess access = 1;
+  ServiceInfo info = 2;
+  // `systemctl status`: state, main PID, memory, cgroup and the last log lines.
+  string status_text = 3;
+  uint32 main_pid = 4;
+  uint64 memory = 5; // bytes, 0 = unknown
+  uint64 active_since_unix = 6;
+  bool can_reload = 7;
+  string fragment_path = 8;
+  // Result of a ControlService call, if any.
+  string message = 9;
+}
+
+message ControlServiceRequest {
+  enum Action {
+    ACTION_UNSPECIFIED = 0;
+    START = 1;
+    STOP = 2;
+    RESTART = 3;
+    RELOAD = 4;
+    ENABLE = 5; // at boot; with `now` also start it
+    DISABLE = 6; // at boot; with `now` also stop it
+    RESET_FAILED = 7;
+  }
+  string name = 1;
+  Action action = 2;
+  bool now = 3;
+}
+
+message GetSystemSettingsRequest {
+  // Also list every readable sysctl (group "all-sysctl", ~1000 entries) for searching.
+  bool all_sysctl = 1;
+  // Include these sysctl keys even if dysd hasn't changed them (group "custom").
+  repeated string sysctl_keys = 2;
+}
+
+message SystemSettings {
+  AdminAccess access = 1;
+  repeated SettingGroup groups = 2;
+  // Result of a SetSystemSetting call, if any.
+  string message = 3;
+}
+
+message SettingGroup {
+  string id = 1;
+  string title = 2;
+  string icon = 3; // memory, network, kernel, cpu, power, storage, system, custom
+  repeated Setting settings = 4;
+}
+
+message Setting {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    BOOL = 1; // value "0"/"1" (sysctl) or "off"/"on"
+    INT = 2;
+    CHOICE = 3;
+    TEXT = 4;
+  }
+  // "sysctl:vm.swappiness", "cpu:governor", "cpu:epp", "cpu:boost", "thp:enabled", "thp:defrag",
+  // "io:<disk>", "power:profile", "sys:hostname", "sys:timezone", "sys:ntp".
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  Kind kind = 4;
+  string value = 5; // current value; empty if unreadable
+  repeated string choices = 6;
+  int64 min = 7; // INT; min == max == 0: no limits
+  int64 max = 8;
+  string unit = 9; // shown after the value: "%", "pages", ...
+  // The value before dysd first changed it ("" = dysd never changed it).
+  string original = 10;
+  // Saved to be reapplied at boot (/etc/sysctl.d/99-dysd.conf, /etc/tmpfiles.d/dysd-tuning.conf).
+  bool persistent = 11;
+  // Has a "keep after reboot" option. False for settings that stick by themselves (hostname, ...).
+  bool can_persist = 12;
+  bool writable = 13;
+  string note = 14; // caveats, or why it isn't writable
+  // BOOL: what "on" means for the value ("1", "on", "Y").
+  string on_value = 15;
+  string off_value = 16;
+}
+
+message SetSystemSettingRequest {
+  string id = 1;
+  string value = 2;
+  // Keep after reboot. False also drops an earlier "keep" for this setting.
+  bool persist = 3;
+  // Put back `original` and drop the boot entry (value is ignored).
+  bool restore = 4;
 }

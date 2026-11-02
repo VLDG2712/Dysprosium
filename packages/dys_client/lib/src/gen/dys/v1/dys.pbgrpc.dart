@@ -248,6 +248,62 @@ class SystemClient extends $grpc.Client {
     return $createUnaryCall(_$getInfo, request, options: options);
   }
 
+  /// Processes, services and system settings. Reading works everywhere and needs no privileges.
+  /// Changes need /etc/dysd/admin.conf (the opt-in), a LAN address or the local socket, and go
+  /// through dysd-admin@<request>.service: a root script (/usr/lib/dysd/admin) that re-checks every
+  /// request (only regular users' processes, unit and sysctl denylists).
+  $grpc.ResponseFuture<$0.ProcessList> listProcesses(
+    $0.ListProcessesRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$listProcesses, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.AdminReply> signalProcess(
+    $0.SignalProcessRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$signalProcess, request, options: options);
+  }
+
+  /// System services, timers, sockets and paths (not user units).
+  $grpc.ResponseFuture<$0.ServiceList> listServices(
+    $0.ListServicesRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$listServices, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.ServiceDetail> getService(
+    $0.GetServiceRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getService, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.ServiceDetail> controlService(
+    $0.ControlServiceRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$controlService, request, options: options);
+  }
+
+  /// sysctls (a curated list plus any key), CPU frequency, transparent hugepages, I/O schedulers,
+  /// power profile, hostname, time zone and NTP, as generic settings the phone renders as-is.
+  $grpc.ResponseFuture<$0.SystemSettings> getSystemSettings(
+    $0.GetSystemSettingsRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getSystemSettings, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.SystemSettings> setSystemSetting(
+    $0.SetSystemSettingRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$setSystemSetting, request, options: options);
+  }
+
   // method descriptors
 
   static final _$ping = $grpc.ClientMethod<$0.PingRequest, $0.PingReply>(
@@ -375,6 +431,41 @@ class SystemClient extends $grpc.Client {
       '/dys.v1.System/GetInfo',
       ($0.GetInfoRequest value) => value.writeToBuffer(),
       $0.SystemInfo.fromBuffer);
+  static final _$listProcesses =
+      $grpc.ClientMethod<$0.ListProcessesRequest, $0.ProcessList>(
+          '/dys.v1.System/ListProcesses',
+          ($0.ListProcessesRequest value) => value.writeToBuffer(),
+          $0.ProcessList.fromBuffer);
+  static final _$signalProcess =
+      $grpc.ClientMethod<$0.SignalProcessRequest, $0.AdminReply>(
+          '/dys.v1.System/SignalProcess',
+          ($0.SignalProcessRequest value) => value.writeToBuffer(),
+          $0.AdminReply.fromBuffer);
+  static final _$listServices =
+      $grpc.ClientMethod<$0.ListServicesRequest, $0.ServiceList>(
+          '/dys.v1.System/ListServices',
+          ($0.ListServicesRequest value) => value.writeToBuffer(),
+          $0.ServiceList.fromBuffer);
+  static final _$getService =
+      $grpc.ClientMethod<$0.GetServiceRequest, $0.ServiceDetail>(
+          '/dys.v1.System/GetService',
+          ($0.GetServiceRequest value) => value.writeToBuffer(),
+          $0.ServiceDetail.fromBuffer);
+  static final _$controlService =
+      $grpc.ClientMethod<$0.ControlServiceRequest, $0.ServiceDetail>(
+          '/dys.v1.System/ControlService',
+          ($0.ControlServiceRequest value) => value.writeToBuffer(),
+          $0.ServiceDetail.fromBuffer);
+  static final _$getSystemSettings =
+      $grpc.ClientMethod<$0.GetSystemSettingsRequest, $0.SystemSettings>(
+          '/dys.v1.System/GetSystemSettings',
+          ($0.GetSystemSettingsRequest value) => value.writeToBuffer(),
+          $0.SystemSettings.fromBuffer);
+  static final _$setSystemSetting =
+      $grpc.ClientMethod<$0.SetSystemSettingRequest, $0.SystemSettings>(
+          '/dys.v1.System/SetSystemSetting',
+          ($0.SetSystemSettingRequest value) => value.writeToBuffer(),
+          $0.SystemSettings.fromBuffer);
 }
 
 @$pb.GrpcServiceName('dys.v1.System')
@@ -583,6 +674,63 @@ abstract class SystemServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.GetInfoRequest.fromBuffer(value),
         ($0.SystemInfo value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ListProcessesRequest, $0.ProcessList>(
+        'ListProcesses',
+        listProcesses_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.ListProcessesRequest.fromBuffer(value),
+        ($0.ProcessList value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SignalProcessRequest, $0.AdminReply>(
+        'SignalProcess',
+        signalProcess_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.SignalProcessRequest.fromBuffer(value),
+        ($0.AdminReply value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ListServicesRequest, $0.ServiceList>(
+        'ListServices',
+        listServices_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.ListServicesRequest.fromBuffer(value),
+        ($0.ServiceList value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetServiceRequest, $0.ServiceDetail>(
+        'GetService',
+        getService_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GetServiceRequest.fromBuffer(value),
+        ($0.ServiceDetail value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ControlServiceRequest, $0.ServiceDetail>(
+        'ControlService',
+        controlService_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.ControlServiceRequest.fromBuffer(value),
+        ($0.ServiceDetail value) => value.writeToBuffer()));
+    $addMethod(
+        $grpc.ServiceMethod<$0.GetSystemSettingsRequest, $0.SystemSettings>(
+            'GetSystemSettings',
+            getSystemSettings_Pre,
+            false,
+            false,
+            ($core.List<$core.int> value) =>
+                $0.GetSystemSettingsRequest.fromBuffer(value),
+            ($0.SystemSettings value) => value.writeToBuffer()));
+    $addMethod(
+        $grpc.ServiceMethod<$0.SetSystemSettingRequest, $0.SystemSettings>(
+            'SetSystemSetting',
+            setSystemSetting_Pre,
+            false,
+            false,
+            ($core.List<$core.int> value) =>
+                $0.SetSystemSettingRequest.fromBuffer(value),
+            ($0.SystemSettings value) => value.writeToBuffer()));
   }
 
   $async.Future<$0.PingReply> ping_Pre(
@@ -793,6 +941,63 @@ abstract class SystemServiceBase extends $grpc.Service {
 
   $async.Future<$0.SystemInfo> getInfo(
       $grpc.ServiceCall call, $0.GetInfoRequest request);
+
+  $async.Future<$0.ProcessList> listProcesses_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ListProcessesRequest> $request) async {
+    return listProcesses($call, await $request);
+  }
+
+  $async.Future<$0.ProcessList> listProcesses(
+      $grpc.ServiceCall call, $0.ListProcessesRequest request);
+
+  $async.Future<$0.AdminReply> signalProcess_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.SignalProcessRequest> $request) async {
+    return signalProcess($call, await $request);
+  }
+
+  $async.Future<$0.AdminReply> signalProcess(
+      $grpc.ServiceCall call, $0.SignalProcessRequest request);
+
+  $async.Future<$0.ServiceList> listServices_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ListServicesRequest> $request) async {
+    return listServices($call, await $request);
+  }
+
+  $async.Future<$0.ServiceList> listServices(
+      $grpc.ServiceCall call, $0.ListServicesRequest request);
+
+  $async.Future<$0.ServiceDetail> getService_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.GetServiceRequest> $request) async {
+    return getService($call, await $request);
+  }
+
+  $async.Future<$0.ServiceDetail> getService(
+      $grpc.ServiceCall call, $0.GetServiceRequest request);
+
+  $async.Future<$0.ServiceDetail> controlService_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ControlServiceRequest> $request) async {
+    return controlService($call, await $request);
+  }
+
+  $async.Future<$0.ServiceDetail> controlService(
+      $grpc.ServiceCall call, $0.ControlServiceRequest request);
+
+  $async.Future<$0.SystemSettings> getSystemSettings_Pre(
+      $grpc.ServiceCall $call,
+      $async.Future<$0.GetSystemSettingsRequest> $request) async {
+    return getSystemSettings($call, await $request);
+  }
+
+  $async.Future<$0.SystemSettings> getSystemSettings(
+      $grpc.ServiceCall call, $0.GetSystemSettingsRequest request);
+
+  $async.Future<$0.SystemSettings> setSystemSetting_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.SetSystemSettingRequest> $request) async {
+    return setSystemSetting($call, await $request);
+  }
+
+  $async.Future<$0.SystemSettings> setSystemSetting(
+      $grpc.ServiceCall call, $0.SetSystemSettingRequest request);
 }
 
 /// Served ONLY on the short-lived pairing listener (server-auth TLS, no client cert), which exists

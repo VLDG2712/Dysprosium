@@ -6,7 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Every card the app can show. A card appears in at most one tab; cards in no tab are hidden.
 class CardInfo {
-  const CardInfo(this.id, this.title, this.icon, this.description, {this.hideable = true});
+  const CardInfo(this.id, this.title, this.icon, this.description,
+      {this.hideable = true, this.preferTab, this.preferFirst = false});
 
   final String id;
   final String title;
@@ -15,6 +16,11 @@ class CardInfo {
 
   /// "This phone / pairing" holds Forget PC: it can move but not disappear.
   final bool hideable;
+
+  /// When an app update adds this card to a saved layout: the tab (by title) it goes to, at the
+  /// start or the end. Falls back to the end of the last tab.
+  final String? preferTab;
+  final bool preferFirst;
 }
 
 const cardCatalog = <CardInfo>[
@@ -22,10 +28,16 @@ const cardCatalog = <CardInfo>[
   CardInfo('profiles', 'Profiles', Icons.tune, 'Apply/save GPU + fan + lighting presets'),
   CardInfo('reboot', 'Power', Icons.power_settings_new, 'Reboot, shut down, sleep, reboot into Windows'),
   CardInfo('stats', 'Live stats', Icons.monitor_heart_outlined, 'CPU/RAM/GPU, temps, network, disks, processes'),
+  CardInfo('processes', 'Processes', Icons.view_list_outlined, 'Every process; end your own (home network)',
+      preferTab: 'Stats'),
   CardInfo('cooling', 'Cooling', Icons.water_drop_outlined, 'nzxt-ctl liquid temp, pump/fans, mode'),
   CardInfo('gpu', 'GPU power limit', Icons.memory, 'NVIDIA power limit slider'),
   CardInfo('rgb', 'Lighting', Icons.palette_outlined, 'OpenRGB colour, effects, modes'),
   CardInfo('minecraft', 'Minecraft', Icons.videogame_asset_outlined, 'Server state, players, restart'),
+  CardInfo('services', 'Services', Icons.miscellaneous_services_outlined,
+      'Start, stop, enable system services (home network)', preferTab: 'System', preferFirst: true),
+  CardInfo('settings', 'System settings', Icons.settings_suggest_outlined,
+      'sysctls, CPU, power profile, hostname, time (home network)', preferTab: 'System', preferFirst: true),
   CardInfo('info', 'PC info', Icons.info_outline, 'OS, kernel, shell, desktop, CPU, GPU, RAM, disks, network'),
   CardInfo('updates', 'Updates', Icons.system_update_alt, 'Check and apply system updates'),
   CardInfo('alerts', 'Alerts', Icons.notifications_outlined, 'ntfy settings and test alert'),
@@ -79,10 +91,13 @@ class AppLayout {
 
   static AppLayout defaults() => AppLayout([
         LayoutTab(title: 'Home', icon: 'home', cards: ['status', 'profiles', 'reboot']),
-        LayoutTab(title: 'Stats', icon: 'stats', cards: ['stats']),
+        LayoutTab(title: 'Stats', icon: 'stats', cards: ['stats', 'processes']),
         LayoutTab(title: 'Hardware', icon: 'hardware', cards: ['cooling', 'gpu']),
         LayoutTab(title: 'Lighting', icon: 'lighting', cards: ['rgb']),
-        LayoutTab(title: 'System', icon: 'system', cards: ['info', 'minecraft', 'updates', 'alerts', 'wake', 'device']),
+        LayoutTab(
+            title: 'System',
+            icon: 'system',
+            cards: ['services', 'settings', 'info', 'minecraft', 'updates', 'alerts', 'wake', 'device']),
       ]);
 
   AppLayout copy() => AppLayout([for (final t in tabs) t.copy()]);
@@ -127,10 +142,22 @@ class AppLayout {
       }
       if (tabs.isEmpty) return defaults();
       final known = ((j['known'] as List?) ?? const []).cast<String>().toSet();
+      final firstAt = <LayoutTab, int>{};
       for (final c in cardCatalog) {
         if (seen.contains(c.id)) continue;
         if (!known.contains(c.id) || !c.hideable) {
-          tabs.last.cards.add(c.id);
+          final pref = c.hideable && c.preferTab != null
+              ? tabs.where((t) => t.title.toLowerCase() == c.preferTab!.toLowerCase()).firstOrNull
+              : null;
+          final tab = pref ?? tabs.last;
+          if (pref != null && c.preferFirst) {
+            // Several new "first" cards keep their catalog order.
+            final at = firstAt[tab] ?? 0;
+            tab.cards.insert(at, c.id);
+            firstAt[tab] = at + 1;
+          } else {
+            tab.cards.add(c.id);
+          }
           seen.add(c.id);
         }
       }

@@ -4,7 +4,10 @@
 //!   dysd-reboot-windows.service  BootNext = Windows Boot Manager, reboot
 //!   dysd-update.service          /usr/lib/dysd/apply-updates (pacman / apt / dnf, repo packages)
 //! Reboot/shutdown/sleep go straight to logind (login1 polkit actions allowed for dysd).
+//! Processes / services / system settings changes go through dysd-admin@<request>.service, see
+//! crate::admin.
 
+pub mod admin;
 pub mod gpu;
 pub mod info;
 pub mod minecraft;
@@ -37,7 +40,7 @@ use runner::{Runner, args};
 pub const REBOOT_UNIT: &str = "dysd-reboot-windows.service";
 pub const UPDATE_UNIT: &str = "dysd-update.service";
 
-const SHORT: Duration = Duration::from_secs(30);
+pub(crate) const SHORT: Duration = Duration::from_secs(30);
 const CHECK: Duration = Duration::from_secs(180);
 const CACHE_TTL: Duration = Duration::from_secs(600);
 
@@ -57,6 +60,8 @@ pub struct Paths {
     pub reboot_required: PathBuf,
     /// Debian/Ubuntu: when apt last refreshed its package lists (stamp file, else the lists dir).
     pub apt_lists: Vec<PathBuf>,
+    /// Processes / services / system settings.
+    pub admin: crate::admin::AdminPaths,
 }
 
 impl Paths {
@@ -74,6 +79,7 @@ impl Paths {
                 PathBuf::from("/var/lib/apt/periodic/update-success-stamp"),
                 PathBuf::from("/var/lib/apt/lists"),
             ],
+            admin: crate::admin::AdminPaths::new(state_dir),
         }
     }
 }
@@ -108,6 +114,12 @@ pub struct Actions {
     stats_proc: PathBuf,
     /// Package manager family (from /etc/os-release).
     family: Family,
+    /// Processes / services / system settings.
+    admin: crate::admin::Admin,
+    /// Serialises admin changes (the root script rewrites persistence files).
+    admin_lock: Mutex<()>,
+    /// `timedatectl list-timezones`, read once.
+    tz_cache: tokio::sync::OnceCell<Vec<String>>,
 }
 
 fn now_unix() -> u64 {
@@ -120,6 +132,7 @@ fn internal(e: impl std::fmt::Display) -> Status {
 
 impl Actions {
     pub fn new(runner: Arc<dyn Runner>, paths: Paths) -> Self {
+        let paths_admin = paths.admin.clone();
         let config = Config::default();
         let cooling = Arc::new(Cooling::new(config.cooling.nzxt_socket.clone(), config.cooling.allow_mode_changes));
         let stats = StatsHub::new(Sampler::new(Sources::default(), runner.clone()), Some(cooling.clone()));
@@ -138,6 +151,9 @@ impl Actions {
             info: info::InfoCache::new(info::Root::default()),
             stats_proc: Sources::default().proc,
             family: Family::detect_system(),
+            admin: crate::admin::Admin::new(paths_admin),
+            admin_lock: Mutex::new(()),
+            tz_cache: tokio::sync::OnceCell::new(),
             runner,
         }
     }
@@ -187,6 +203,10 @@ impl Actions {
     pub fn with_info_root(mut self, root: info::Root) -> Self {
         self.info = info::InfoCache::new(root);
         self
+    }
+
+    pub fn admin(&self) -> &crate::admin::Admin {
+        &self.admin
     }
 
     pub fn config(&self) -> &Config {
@@ -555,6 +575,7 @@ mod tests {
             update_status: dir.path().join("update.status"),
             reboot_required: dir.path().join("reboot-required"),
             apt_lists: vec![dir.path().join("apt-stamp")],
+            admin: crate::admin::AdminPaths::under(dir.path().join("root"), dir.path().join("orig.json")),
         };
         (fake.clone(), Actions::new(fake, paths).with_family(Family::Arch), dir)
     }

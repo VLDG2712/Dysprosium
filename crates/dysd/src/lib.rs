@@ -3,6 +3,7 @@
 //! The binary in `main.rs` is a thin CLI.
 
 pub mod actions;
+pub mod admin;
 pub mod alerts;
 pub mod config;
 pub mod cooling;

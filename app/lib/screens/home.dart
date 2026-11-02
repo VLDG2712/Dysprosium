@@ -24,6 +24,8 @@ import 'pair.dart';
 import 'scan.dart';
 import 'settings.dart';
 import 'stats_screen.dart';
+import '../guard.dart';
+import '../widgets/admin_cards.dart';
 
 typedef ClientFactory = DysClient Function(PairedServer s);
 
@@ -39,8 +41,10 @@ class HomeScreen extends StatefulWidget {
     this.wake = defaultWake,
     LayoutStore? layoutStore,
     ThemeController? theme,
+    ChangeGuard? guard,
   })  : layoutStore = layoutStore ?? LayoutStore(),
-        theme = theme ?? ThemeController();
+        theme = theme ?? ThemeController(),
+        guard = guard ?? DeviceAuthGuard();
 
   final PairingStore store;
   final WakeStore wakeStore;
@@ -49,6 +53,9 @@ class HomeScreen extends StatefulWidget {
   final WakeFn wake;
   final LayoutStore layoutStore;
   final ThemeController theme;
+
+  /// Fingerprint/PIN before changes on the Processes / Services / System settings cards.
+  final ChangeGuard guard;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -351,6 +358,9 @@ class _HomeScreenState extends State<HomeScreen> {
       'gpu' => GpuCard(key: k, client: c),
       'rgb' => RgbCard(key: k, client: c),
       'minecraft' => MinecraftCard(key: k, client: c),
+      'processes' => ProcessesCard(key: k, client: c, guard: widget.guard),
+      'services' => ServicesCard(key: k, client: c, guard: widget.guard),
+      'settings' => SystemSettingsCard(key: k, client: c, guard: widget.guard),
       'updates' => UpdatesCard(key: k, client: c),
       'alerts' => AlertsCard(key: k, client: c),
       'wake' => WakeCard(

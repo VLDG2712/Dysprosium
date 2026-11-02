@@ -1,7 +1,8 @@
 // /usr/share/polkit-1/rules.d/50-dysd.rules
-// Lets the dysd system user START exactly these units, start/stop/restart the Minecraft server
-// unit, and reboot / power off / suspend through logind; nothing else (no enable/edit, no other
-// units, never the -ignore-inhibit variants). Everyone else falls through to the normal policy.
+// Lets the dysd system user START exactly these units (plus dysd-admin@ requests), start/stop/
+// restart the Minecraft server unit, and reboot / power off / suspend through logind; nothing
+// else (no enable/edit, no other units, never the -ignore-inhibit variants). Everyone else falls
+// through to the normal policy.
 
 // Must match `[minecraft] unit` in /etc/dysd/dysd.toml.
 var DYSD_MINECRAFT_UNIT = "atm10.service";
@@ -20,6 +21,12 @@ polkit.addRule(function (action, subject) {
     }
     var unit = action.lookup("unit");
     if (unit === "dysd-reboot-windows.service" || unit === "dysd-update.service") {
+        return polkit.Result.YES;
+    }
+    // dysd-admin@<request>.service: the phone's Processes / Services / System settings tabs. The
+    // root script behind it (/usr/lib/dysd/admin) re-checks every request and does nothing
+    // unless /etc/dysd/admin.conf exists.
+    if (/^dysd-admin@[A-Za-z0-9:_.\\-]+\.service$/.test(unit)) {
         return polkit.Result.YES;
     }
     // dysd-gpu-limit@<watts>.service, 2-3 digits, sane range. nvidia-smi enforces the card's limits.

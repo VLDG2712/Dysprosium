@@ -1581,3 +1581,428 @@ const RevokeClientReply$json = {
 final $typed_data.Uint8List revokeClientReplyDescriptor = $convert.base64Decode(
     'ChFSZXZva2VDbGllbnRSZXBseRIsCgdyZXZva2VkGAEgASgLMhIuZHlzLnYxLkNsaWVudEluZm'
     '9SB3Jldm9rZWQ=');
+
+@$core.Deprecated('Use adminAccessDescriptor instead')
+const AdminAccess$json = {
+  '1': 'AdminAccess',
+  '2': [
+    {'1': 'enabled', '3': 1, '4': 1, '5': 8, '10': 'enabled'},
+    {'1': 'can_change', '3': 2, '4': 1, '5': 8, '10': 'canChange'},
+    {'1': 'reason', '3': 3, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `AdminAccess`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List adminAccessDescriptor = $convert.base64Decode(
+    'CgtBZG1pbkFjY2VzcxIYCgdlbmFibGVkGAEgASgIUgdlbmFibGVkEh0KCmNhbl9jaGFuZ2UYAi'
+    'ABKAhSCWNhbkNoYW5nZRIWCgZyZWFzb24YAyABKAlSBnJlYXNvbg==');
+
+@$core.Deprecated('Use adminReplyDescriptor instead')
+const AdminReply$json = {
+  '1': 'AdminReply',
+  '2': [
+    {'1': 'message', '3': 1, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `AdminReply`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List adminReplyDescriptor = $convert
+    .base64Decode('CgpBZG1pblJlcGx5EhgKB21lc3NhZ2UYASABKAlSB21lc3NhZ2U=');
+
+@$core.Deprecated('Use listProcessesRequestDescriptor instead')
+const ListProcessesRequest$json = {
+  '1': 'ListProcessesRequest',
+};
+
+/// Descriptor for `ListProcessesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listProcessesRequestDescriptor =
+    $convert.base64Decode('ChRMaXN0UHJvY2Vzc2VzUmVxdWVzdA==');
+
+@$core.Deprecated('Use processListDescriptor instead')
+const ProcessList$json = {
+  '1': 'ProcessList',
+  '2': [
+    {
+      '1': 'access',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.dys.v1.AdminAccess',
+      '10': 'access'
+    },
+    {
+      '1': 'processes',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.ProcessInfo',
+      '10': 'processes'
+    },
+  ],
+};
+
+/// Descriptor for `ProcessList`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List processListDescriptor = $convert.base64Decode(
+    'CgtQcm9jZXNzTGlzdBIrCgZhY2Nlc3MYASABKAsyEy5keXMudjEuQWRtaW5BY2Nlc3NSBmFjY2'
+    'VzcxIxCglwcm9jZXNzZXMYAiADKAsyEy5keXMudjEuUHJvY2Vzc0luZm9SCXByb2Nlc3Nlcw==');
+
+@$core.Deprecated('Use processInfoDescriptor instead')
+const ProcessInfo$json = {
+  '1': 'ProcessInfo',
+  '2': [
+    {'1': 'pid', '3': 1, '4': 1, '5': 13, '10': 'pid'},
+    {'1': 'ppid', '3': 2, '4': 1, '5': 13, '10': 'ppid'},
+    {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'cmdline', '3': 4, '4': 1, '5': 9, '10': 'cmdline'},
+    {'1': 'uid', '3': 5, '4': 1, '5': 13, '10': 'uid'},
+    {'1': 'user', '3': 6, '4': 1, '5': 9, '10': 'user'},
+    {'1': 'state', '3': 7, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'cpu_pct', '3': 8, '4': 1, '5': 2, '10': 'cpuPct'},
+    {'1': 'rss', '3': 9, '4': 1, '5': 4, '10': 'rss'},
+    {'1': 'threads', '3': 10, '4': 1, '5': 13, '10': 'threads'},
+    {'1': 'start_ticks', '3': 11, '4': 1, '5': 4, '10': 'startTicks'},
+    {'1': 'started_unix', '3': 12, '4': 1, '5': 4, '10': 'startedUnix'},
+    {'1': 'killable', '3': 13, '4': 1, '5': 8, '10': 'killable'},
+    {'1': 'unit', '3': 14, '4': 1, '5': 9, '10': 'unit'},
+    {'1': 'kernel_thread', '3': 15, '4': 1, '5': 8, '10': 'kernelThread'},
+  ],
+};
+
+/// Descriptor for `ProcessInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List processInfoDescriptor = $convert.base64Decode(
+    'CgtQcm9jZXNzSW5mbxIQCgNwaWQYASABKA1SA3BpZBISCgRwcGlkGAIgASgNUgRwcGlkEhIKBG'
+    '5hbWUYAyABKAlSBG5hbWUSGAoHY21kbGluZRgEIAEoCVIHY21kbGluZRIQCgN1aWQYBSABKA1S'
+    'A3VpZBISCgR1c2VyGAYgASgJUgR1c2VyEhQKBXN0YXRlGAcgASgJUgVzdGF0ZRIXCgdjcHVfcG'
+    'N0GAggASgCUgZjcHVQY3QSEAoDcnNzGAkgASgEUgNyc3MSGAoHdGhyZWFkcxgKIAEoDVIHdGhy'
+    'ZWFkcxIfCgtzdGFydF90aWNrcxgLIAEoBFIKc3RhcnRUaWNrcxIhCgxzdGFydGVkX3VuaXgYDC'
+    'ABKARSC3N0YXJ0ZWRVbml4EhoKCGtpbGxhYmxlGA0gASgIUghraWxsYWJsZRISCgR1bml0GA4g'
+    'ASgJUgR1bml0EiMKDWtlcm5lbF90aHJlYWQYDyABKAhSDGtlcm5lbFRocmVhZA==');
+
+@$core.Deprecated('Use signalProcessRequestDescriptor instead')
+const SignalProcessRequest$json = {
+  '1': 'SignalProcessRequest',
+  '2': [
+    {'1': 'pid', '3': 1, '4': 1, '5': 13, '10': 'pid'},
+    {'1': 'start_ticks', '3': 2, '4': 1, '5': 4, '10': 'startTicks'},
+    {
+      '1': 'signal',
+      '3': 3,
+      '4': 1,
+      '5': 14,
+      '6': '.dys.v1.SignalProcessRequest.Signal',
+      '10': 'signal'
+    },
+  ],
+  '4': [SignalProcessRequest_Signal$json],
+};
+
+@$core.Deprecated('Use signalProcessRequestDescriptor instead')
+const SignalProcessRequest_Signal$json = {
+  '1': 'Signal',
+  '2': [
+    {'1': 'SIGNAL_UNSPECIFIED', '2': 0},
+    {'1': 'TERM', '2': 1},
+    {'1': 'KILL', '2': 2},
+  ],
+};
+
+/// Descriptor for `SignalProcessRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List signalProcessRequestDescriptor = $convert.base64Decode(
+    'ChRTaWduYWxQcm9jZXNzUmVxdWVzdBIQCgNwaWQYASABKA1SA3BpZBIfCgtzdGFydF90aWNrcx'
+    'gCIAEoBFIKc3RhcnRUaWNrcxI7CgZzaWduYWwYAyABKA4yIy5keXMudjEuU2lnbmFsUHJvY2Vz'
+    'c1JlcXVlc3QuU2lnbmFsUgZzaWduYWwiNAoGU2lnbmFsEhYKElNJR05BTF9VTlNQRUNJRklFRB'
+    'AAEggKBFRFUk0QARIICgRLSUxMEAI=');
+
+@$core.Deprecated('Use listServicesRequestDescriptor instead')
+const ListServicesRequest$json = {
+  '1': 'ListServicesRequest',
+};
+
+/// Descriptor for `ListServicesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listServicesRequestDescriptor =
+    $convert.base64Decode('ChNMaXN0U2VydmljZXNSZXF1ZXN0');
+
+@$core.Deprecated('Use serviceListDescriptor instead')
+const ServiceList$json = {
+  '1': 'ServiceList',
+  '2': [
+    {
+      '1': 'access',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.dys.v1.AdminAccess',
+      '10': 'access'
+    },
+    {
+      '1': 'services',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.ServiceInfo',
+      '10': 'services'
+    },
+  ],
+};
+
+/// Descriptor for `ServiceList`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List serviceListDescriptor = $convert.base64Decode(
+    'CgtTZXJ2aWNlTGlzdBIrCgZhY2Nlc3MYASABKAsyEy5keXMudjEuQWRtaW5BY2Nlc3NSBmFjY2'
+    'VzcxIvCghzZXJ2aWNlcxgCIAMoCzITLmR5cy52MS5TZXJ2aWNlSW5mb1IIc2VydmljZXM=');
+
+@$core.Deprecated('Use serviceInfoDescriptor instead')
+const ServiceInfo$json = {
+  '1': 'ServiceInfo',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'description', '3': 2, '4': 1, '5': 9, '10': 'description'},
+    {'1': 'load_state', '3': 3, '4': 1, '5': 9, '10': 'loadState'},
+    {'1': 'active_state', '3': 4, '4': 1, '5': 9, '10': 'activeState'},
+    {'1': 'sub_state', '3': 5, '4': 1, '5': 9, '10': 'subState'},
+    {'1': 'file_state', '3': 6, '4': 1, '5': 9, '10': 'fileState'},
+    {'1': 'protected', '3': 7, '4': 1, '5': 8, '10': 'protected'},
+  ],
+};
+
+/// Descriptor for `ServiceInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List serviceInfoDescriptor = $convert.base64Decode(
+    'CgtTZXJ2aWNlSW5mbxISCgRuYW1lGAEgASgJUgRuYW1lEiAKC2Rlc2NyaXB0aW9uGAIgASgJUg'
+    'tkZXNjcmlwdGlvbhIdCgpsb2FkX3N0YXRlGAMgASgJUglsb2FkU3RhdGUSIQoMYWN0aXZlX3N0'
+    'YXRlGAQgASgJUgthY3RpdmVTdGF0ZRIbCglzdWJfc3RhdGUYBSABKAlSCHN1YlN0YXRlEh0KCm'
+    'ZpbGVfc3RhdGUYBiABKAlSCWZpbGVTdGF0ZRIcCglwcm90ZWN0ZWQYByABKAhSCXByb3RlY3Rl'
+    'ZA==');
+
+@$core.Deprecated('Use getServiceRequestDescriptor instead')
+const GetServiceRequest$json = {
+  '1': 'GetServiceRequest',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'log_lines', '3': 2, '4': 1, '5': 13, '10': 'logLines'},
+  ],
+};
+
+/// Descriptor for `GetServiceRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getServiceRequestDescriptor = $convert.base64Decode(
+    'ChFHZXRTZXJ2aWNlUmVxdWVzdBISCgRuYW1lGAEgASgJUgRuYW1lEhsKCWxvZ19saW5lcxgCIA'
+    'EoDVIIbG9nTGluZXM=');
+
+@$core.Deprecated('Use serviceDetailDescriptor instead')
+const ServiceDetail$json = {
+  '1': 'ServiceDetail',
+  '2': [
+    {
+      '1': 'access',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.dys.v1.AdminAccess',
+      '10': 'access'
+    },
+    {
+      '1': 'info',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.dys.v1.ServiceInfo',
+      '10': 'info'
+    },
+    {'1': 'status_text', '3': 3, '4': 1, '5': 9, '10': 'statusText'},
+    {'1': 'main_pid', '3': 4, '4': 1, '5': 13, '10': 'mainPid'},
+    {'1': 'memory', '3': 5, '4': 1, '5': 4, '10': 'memory'},
+    {'1': 'active_since_unix', '3': 6, '4': 1, '5': 4, '10': 'activeSinceUnix'},
+    {'1': 'can_reload', '3': 7, '4': 1, '5': 8, '10': 'canReload'},
+    {'1': 'fragment_path', '3': 8, '4': 1, '5': 9, '10': 'fragmentPath'},
+    {'1': 'message', '3': 9, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `ServiceDetail`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List serviceDetailDescriptor = $convert.base64Decode(
+    'Cg1TZXJ2aWNlRGV0YWlsEisKBmFjY2VzcxgBIAEoCzITLmR5cy52MS5BZG1pbkFjY2Vzc1IGYW'
+    'NjZXNzEicKBGluZm8YAiABKAsyEy5keXMudjEuU2VydmljZUluZm9SBGluZm8SHwoLc3RhdHVz'
+    'X3RleHQYAyABKAlSCnN0YXR1c1RleHQSGQoIbWFpbl9waWQYBCABKA1SB21haW5QaWQSFgoGbW'
+    'Vtb3J5GAUgASgEUgZtZW1vcnkSKgoRYWN0aXZlX3NpbmNlX3VuaXgYBiABKARSD2FjdGl2ZVNp'
+    'bmNlVW5peBIdCgpjYW5fcmVsb2FkGAcgASgIUgljYW5SZWxvYWQSIwoNZnJhZ21lbnRfcGF0aB'
+    'gIIAEoCVIMZnJhZ21lbnRQYXRoEhgKB21lc3NhZ2UYCSABKAlSB21lc3NhZ2U=');
+
+@$core.Deprecated('Use controlServiceRequestDescriptor instead')
+const ControlServiceRequest$json = {
+  '1': 'ControlServiceRequest',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {
+      '1': 'action',
+      '3': 2,
+      '4': 1,
+      '5': 14,
+      '6': '.dys.v1.ControlServiceRequest.Action',
+      '10': 'action'
+    },
+    {'1': 'now', '3': 3, '4': 1, '5': 8, '10': 'now'},
+  ],
+  '4': [ControlServiceRequest_Action$json],
+};
+
+@$core.Deprecated('Use controlServiceRequestDescriptor instead')
+const ControlServiceRequest_Action$json = {
+  '1': 'Action',
+  '2': [
+    {'1': 'ACTION_UNSPECIFIED', '2': 0},
+    {'1': 'START', '2': 1},
+    {'1': 'STOP', '2': 2},
+    {'1': 'RESTART', '2': 3},
+    {'1': 'RELOAD', '2': 4},
+    {'1': 'ENABLE', '2': 5},
+    {'1': 'DISABLE', '2': 6},
+    {'1': 'RESET_FAILED', '2': 7},
+  ],
+};
+
+/// Descriptor for `ControlServiceRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List controlServiceRequestDescriptor = $convert.base64Decode(
+    'ChVDb250cm9sU2VydmljZVJlcXVlc3QSEgoEbmFtZRgBIAEoCVIEbmFtZRI8CgZhY3Rpb24YAi'
+    'ABKA4yJC5keXMudjEuQ29udHJvbFNlcnZpY2VSZXF1ZXN0LkFjdGlvblIGYWN0aW9uEhAKA25v'
+    'dxgDIAEoCFIDbm93InkKBkFjdGlvbhIWChJBQ1RJT05fVU5TUEVDSUZJRUQQABIJCgVTVEFSVB'
+    'ABEggKBFNUT1AQAhILCgdSRVNUQVJUEAMSCgoGUkVMT0FEEAQSCgoGRU5BQkxFEAUSCwoHRElT'
+    'QUJMRRAGEhAKDFJFU0VUX0ZBSUxFRBAH');
+
+@$core.Deprecated('Use getSystemSettingsRequestDescriptor instead')
+const GetSystemSettingsRequest$json = {
+  '1': 'GetSystemSettingsRequest',
+  '2': [
+    {'1': 'all_sysctl', '3': 1, '4': 1, '5': 8, '10': 'allSysctl'},
+    {'1': 'sysctl_keys', '3': 2, '4': 3, '5': 9, '10': 'sysctlKeys'},
+  ],
+};
+
+/// Descriptor for `GetSystemSettingsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getSystemSettingsRequestDescriptor =
+    $convert.base64Decode(
+        'ChhHZXRTeXN0ZW1TZXR0aW5nc1JlcXVlc3QSHQoKYWxsX3N5c2N0bBgBIAEoCFIJYWxsU3lzY3'
+        'RsEh8KC3N5c2N0bF9rZXlzGAIgAygJUgpzeXNjdGxLZXlz');
+
+@$core.Deprecated('Use systemSettingsDescriptor instead')
+const SystemSettings$json = {
+  '1': 'SystemSettings',
+  '2': [
+    {
+      '1': 'access',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.dys.v1.AdminAccess',
+      '10': 'access'
+    },
+    {
+      '1': 'groups',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.SettingGroup',
+      '10': 'groups'
+    },
+    {'1': 'message', '3': 3, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `SystemSettings`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List systemSettingsDescriptor = $convert.base64Decode(
+    'Cg5TeXN0ZW1TZXR0aW5ncxIrCgZhY2Nlc3MYASABKAsyEy5keXMudjEuQWRtaW5BY2Nlc3NSBm'
+    'FjY2VzcxIsCgZncm91cHMYAiADKAsyFC5keXMudjEuU2V0dGluZ0dyb3VwUgZncm91cHMSGAoH'
+    'bWVzc2FnZRgDIAEoCVIHbWVzc2FnZQ==');
+
+@$core.Deprecated('Use settingGroupDescriptor instead')
+const SettingGroup$json = {
+  '1': 'SettingGroup',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'title', '3': 2, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'icon', '3': 3, '4': 1, '5': 9, '10': 'icon'},
+    {
+      '1': 'settings',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.dys.v1.Setting',
+      '10': 'settings'
+    },
+  ],
+};
+
+/// Descriptor for `SettingGroup`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List settingGroupDescriptor = $convert.base64Decode(
+    'CgxTZXR0aW5nR3JvdXASDgoCaWQYASABKAlSAmlkEhQKBXRpdGxlGAIgASgJUgV0aXRsZRISCg'
+    'RpY29uGAMgASgJUgRpY29uEisKCHNldHRpbmdzGAQgAygLMg8uZHlzLnYxLlNldHRpbmdSCHNl'
+    'dHRpbmdz');
+
+@$core.Deprecated('Use settingDescriptor instead')
+const Setting$json = {
+  '1': 'Setting',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'title', '3': 2, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'description', '3': 3, '4': 1, '5': 9, '10': 'description'},
+    {
+      '1': 'kind',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.dys.v1.Setting.Kind',
+      '10': 'kind'
+    },
+    {'1': 'value', '3': 5, '4': 1, '5': 9, '10': 'value'},
+    {'1': 'choices', '3': 6, '4': 3, '5': 9, '10': 'choices'},
+    {'1': 'min', '3': 7, '4': 1, '5': 3, '10': 'min'},
+    {'1': 'max', '3': 8, '4': 1, '5': 3, '10': 'max'},
+    {'1': 'unit', '3': 9, '4': 1, '5': 9, '10': 'unit'},
+    {'1': 'original', '3': 10, '4': 1, '5': 9, '10': 'original'},
+    {'1': 'persistent', '3': 11, '4': 1, '5': 8, '10': 'persistent'},
+    {'1': 'can_persist', '3': 12, '4': 1, '5': 8, '10': 'canPersist'},
+    {'1': 'writable', '3': 13, '4': 1, '5': 8, '10': 'writable'},
+    {'1': 'note', '3': 14, '4': 1, '5': 9, '10': 'note'},
+    {'1': 'on_value', '3': 15, '4': 1, '5': 9, '10': 'onValue'},
+    {'1': 'off_value', '3': 16, '4': 1, '5': 9, '10': 'offValue'},
+  ],
+  '4': [Setting_Kind$json],
+};
+
+@$core.Deprecated('Use settingDescriptor instead')
+const Setting_Kind$json = {
+  '1': 'Kind',
+  '2': [
+    {'1': 'KIND_UNSPECIFIED', '2': 0},
+    {'1': 'BOOL', '2': 1},
+    {'1': 'INT', '2': 2},
+    {'1': 'CHOICE', '2': 3},
+    {'1': 'TEXT', '2': 4},
+  ],
+};
+
+/// Descriptor for `Setting`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List settingDescriptor = $convert.base64Decode(
+    'CgdTZXR0aW5nEg4KAmlkGAEgASgJUgJpZBIUCgV0aXRsZRgCIAEoCVIFdGl0bGUSIAoLZGVzY3'
+    'JpcHRpb24YAyABKAlSC2Rlc2NyaXB0aW9uEigKBGtpbmQYBCABKA4yFC5keXMudjEuU2V0dGlu'
+    'Zy5LaW5kUgRraW5kEhQKBXZhbHVlGAUgASgJUgV2YWx1ZRIYCgdjaG9pY2VzGAYgAygJUgdjaG'
+    '9pY2VzEhAKA21pbhgHIAEoA1IDbWluEhAKA21heBgIIAEoA1IDbWF4EhIKBHVuaXQYCSABKAlS'
+    'BHVuaXQSGgoIb3JpZ2luYWwYCiABKAlSCG9yaWdpbmFsEh4KCnBlcnNpc3RlbnQYCyABKAhSCn'
+    'BlcnNpc3RlbnQSHwoLY2FuX3BlcnNpc3QYDCABKAhSCmNhblBlcnNpc3QSGgoId3JpdGFibGUY'
+    'DSABKAhSCHdyaXRhYmxlEhIKBG5vdGUYDiABKAlSBG5vdGUSGQoIb25fdmFsdWUYDyABKAlSB2'
+    '9uVmFsdWUSGwoJb2ZmX3ZhbHVlGBAgASgJUghvZmZWYWx1ZSJFCgRLaW5kEhQKEEtJTkRfVU5T'
+    'UEVDSUZJRUQQABIICgRCT09MEAESBwoDSU5UEAISCgoGQ0hPSUNFEAMSCAoEVEVYVBAE');
+
+@$core.Deprecated('Use setSystemSettingRequestDescriptor instead')
+const SetSystemSettingRequest$json = {
+  '1': 'SetSystemSettingRequest',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+    {'1': 'persist', '3': 3, '4': 1, '5': 8, '10': 'persist'},
+    {'1': 'restore', '3': 4, '4': 1, '5': 8, '10': 'restore'},
+  ],
+};
+
+/// Descriptor for `SetSystemSettingRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setSystemSettingRequestDescriptor = $convert.base64Decode(
+    'ChdTZXRTeXN0ZW1TZXR0aW5nUmVxdWVzdBIOCgJpZBgBIAEoCVICaWQSFAoFdmFsdWUYAiABKA'
+    'lSBXZhbHVlEhgKB3BlcnNpc3QYAyABKAhSB3BlcnNpc3QSGAoHcmVzdG9yZRgEIAEoCFIHcmVz'
+    'dG9yZQ==');

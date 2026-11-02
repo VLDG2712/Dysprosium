@@ -1,10 +1,24 @@
 #!/bin/bash
-# Fake busctl for dysd's logind calls. NEVER let the real one run in tests: it would really
+# Fake busctl for dysd's logind calls, the Services tab and system settings. NEVER let the real one run in tests: it would really
 # reboot/power off/suspend the machine running them.
 #   busctl --system --json=short call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager METHOD [b false]
 # Can* answers with $FAKE_STATE/can (default "yes"); acting appends the method to $FAKE_STATE/power.
 method=${7:-}
 echo "busctl $*" >> "$FAKE_STATE/calls"
+# Services tab and system settings (read-only calls).
+case "$*" in
+  *ListUnitsByPatterns*)
+    echo '{"type":"a(ssssssouso)","data":[[["atm10.service","ATM10 server","loaded","active","running","","/o",0,"","/"],["getty@tty1.service","Getty on tty1","loaded","active","running","","/o",0,"","/"]]]}'; exit 0 ;;
+  *ListUnitFilesByPatterns*)
+    echo '{"type":"a(ss)","data":[[["/etc/systemd/system/atm10.service","enabled"],["/usr/lib/systemd/system/getty@.service","enabled"],["/usr/lib/systemd/system/cups.service","disabled"]]]}'; exit 0 ;;
+  *"get-property org.freedesktop.hostname1"*) echo '{"type":"s","data":"fakehost"}'; exit 0 ;;
+  *"get-property org.freedesktop.timedate1"*) printf '%s\n' '{"type":"s","data":"Europe/Berlin"}' '{"type":"b","data":true}' '{"type":"b","data":true}'; exit 0 ;;
+  *"get-property org.freedesktop.UPower.PowerProfiles"*)
+    printf '%s\n' "{\"type\":\"s\",\"data\":\"$(cat "$FAKE_STATE/profile" 2>/dev/null || echo balanced)\"}" \
+      '{"type":"aa{sv}","data":[{"Profile":{"type":"s","data":"power-saver"}},{"Profile":{"type":"s","data":"balanced"}},{"Profile":{"type":"s","data":"performance"}}]}'; exit 0 ;;
+  *"get-property net.hadess.PowerProfiles"*) exit 1 ;;
+  "set-property org.freedesktop.UPower.PowerProfiles "*) echo "${@: -1}" > "$FAKE_STATE/profile"; exit 0 ;;
+esac
 case $method in
   Can*) printf '{"type":"s","data":["%s"]}\n' "$(cat "$FAKE_STATE/can" 2>/dev/null || echo yes)" ;;
   ListInhibitors) echo '{"type":"a(ssssuu)","data":[[["shutdown:sleep","Steam","Game running","block",1000,42]]]}' ;;

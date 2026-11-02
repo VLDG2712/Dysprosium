@@ -1,13 +1,41 @@
 #!/bin/bash
 # Fake systemctl for dysd's calls: [--no-ask-password] start [--no-block] UNIT | show -p ActiveState --value UNIT
+# | show/status for the Services tab, and dysd-admin@ requests (runs packaging/libexec/admin on the fake root).
 args=("$@"); [[ ${args[0]} == --no-ask-password ]] && args=("${args[@]:1}")
 echo "systemctl ${args[*]}" >> "$FAKE_STATE/calls"
 case ${args[0]} in
-  show) cat "$FAKE_STATE/update_state" 2>/dev/null || echo inactive; exit 0 ;;
+  show)
+    unit=${args[-1]}
+    case "${args[*]}" in
+      # The admin script resolving aliases.
+      "show -p Id --value -- "*) echo "$unit"; exit 0 ;;
+      # dysd's service details.
+      "show -p Id,"*)
+        state=$(cat "$FAKE_STATE/unit-$unit" 2>/dev/null || echo active)
+        printf 'Id=%s\nDescription=Fake %s\nLoadState=loaded\nActiveState=%s\nSubState=running\nUnitFileState=enabled\nMainPID=4242\nMemoryCurrent=1048576\nActiveEnterTimestampMonotonic=1000000\nCanReload=no\nFragmentPath=/etc/systemd/system/%s\n' \
+          "$unit" "$unit" "$state" "$unit"
+        exit 0 ;;
+    esac
+    cat "$FAKE_STATE/update_state" 2>/dev/null || echo inactive; exit 0 ;;
+  status) unit=${args[-1]}; echo "● $unit - Fake $unit"; echo "     Active: $(cat "$FAKE_STATE/unit-$unit" 2>/dev/null || echo active)"; exit 3 ;;
+  start|stop|restart|reload|reset-failed|enable|disable)
+    # Called by the admin script (as "root") for a unit change.
+    if [[ ${args[0]} != start || ${args[-1]} != dysd-*.service ]]; then
+      unit=${args[-1]}
+      case ${args[0]} in stop|disable) echo inactive > "$FAKE_STATE/unit-$unit" ;; *) echo active > "$FAKE_STATE/unit-$unit" ;; esac
+      exit 0
+    fi ;;&
   start)
     unit=${args[-1]}
     if [[ -e $FAKE_STATE/deny ]]; then echo "Failed to start $unit: Access denied" >&2; exit 4; fi
     case $unit in
+      dysd-admin@*.service)
+        # What systemd would do: unescape the instance and run the root script, here against the
+        # fake root only (never without DYSD_ADMIN_TEST_ROOT: that would be the real system).
+        [[ -n ${DYSD_ADMIN_TEST_ROOT:-} ]] || { echo "fake systemctl: DYSD_ADMIN_TEST_ROOT not set" >&2; exit 9; }
+        inst=${unit#dysd-admin@}; inst=${inst%.service}
+        req=$(systemd-escape -u -- "$inst" 2>/dev/null) || req=$(printf '%b' "${inst//-//}")
+        bash "$(dirname "$0")/../../../../packaging/libexec/admin" "$req" ;;
       dysd-gpu-limit@*.service) w=${unit#dysd-gpu-limit@}; w=${w%.service}
         nvidia-smi -i 0 --power-limit="$w" >/dev/null || { echo "Job for $unit failed." >&2; exit 1; } ;;
       dysd-reboot-windows.service) date +%s >> "$FAKE_STATE/reboots" ;;

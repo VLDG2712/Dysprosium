@@ -41,10 +41,12 @@ The QR lists hosts from the server cert's SANs (IPs first). With only the defaul
 (`<host>`, `<host>.local`) a phone usually can't resolve anything, so add the LAN IP and Tailscale
 IP/name: `dysd init --san …` (the list is saved in `sans.json` and reused by later `init` runs).
 
-## System actions (no custom root code)
+## System actions
 
 dysd runs unprivileged. Root actions are fixed systemd units that polkit
 (`packaging/50-dysd.rules`) lets **only the `dysd` user start**: no stop/edit, no other units.
+The Processes / Services / System settings tabs use one more of these, `dysd-admin@.service`;
+see [their section](#processes-services-system-settings).
 Reboot / shutdown / sleep go to logind directly; the same rules file grants user `dysd` the
 `org.freedesktop.login1.{reboot,power-off,suspend}` actions (+ `-multiple-sessions`), never
 `-ignore-inhibit`.
@@ -162,6 +164,55 @@ dys alerts test                   # ntfy test notification
   new items without an app update.
 - **Wake-on-LAN**: done by the phone through Home Assistant's Wake on LAN entity (dysd is off then): a `button.…` when the integration was added in the UI (pressed), a `switch.…` when configured in YAML (turned on).
 
+## Processes, services, system settings
+
+Three cards in the app (Stats tab: Processes; System tab: Services, System settings), each opening
+a full screen:
+
+- **Processes**: every process with CPU, memory, user and systemd unit, searchable, refreshed every
+  3 s. Your own processes can be ended (TERM) or force-killed (KILL). Root and system-user
+  processes can't (stop their service instead).
+- **Services**: system services, timers, sockets and paths with their state; per unit
+  `systemctl status` with the last log lines, start / stop / restart / reload, enable / disable
+  (optionally "and start/stop now"), clear a failed state.
+- **System settings**: a list of useful sysctls with explanations and sane limits (swappiness,
+  `vm.max_map_count`, inotify watches, IP forwarding, TCP congestion control, split lock
+  mitigation, ...), any other sysctl by name or from the full list, CPU governor / energy
+  preference / turbo, the power profile (power-profiles-daemon or tuned-ppd), transparent
+  hugepages, the I/O scheduler per disk, hostname, time zone and NTP. "Keep after reboot" writes
+  sysctls to `/etc/sysctl.d/99-dysd.conf` and the CPU/THP/I/O values to
+  `/etc/tmpfiles.d/dysd-tuning.conf`. dysd remembers the value from before its first change, so
+  the phone can restore it.
+
+Reading works everywhere and needs nothing extra. **Changes are off until you create
+`/etc/dysd/admin.conf`**, and even then only work from the home network (or the local socket);
+over Tailscale everything is read-only. The phone asks for your fingerprint (or screen-lock PIN)
+before every change.
+
+```fish
+sudo install -m640 -o root -g dys /usr/share/doc/dysprosium/admin.conf.example /etc/dysd/admin.conf
+# from a source checkout: packaging/admin.conf.example. Delete the file to turn it off again.
+```
+
+How it's locked down:
+
+- Every change is one request to `dysd-admin@<request>.service`. polkit lets only the `dysd` user
+  start it; it runs `/usr/lib/dysd/admin` as root, which re-checks everything itself (dysd could
+  be compromised): only processes whose uids are all in `UID_MIN..UID_MAX` from `/etc/login.defs`,
+  with a start time that matches (a reused PID is never hit); only `.service/.timer/.socket/.path`
+  units; unit aliases resolved before checking; and it does nothing without `admin.conf`.
+- Built-in denylists, also in the script: shells (`debug-shell`, gettys), rescue/emergency, dbus,
+  polkit, logind, journald, udevd, `user@` sessions, dysd itself, units that power off or suspend
+  behind logind's back, `modprobe@`, cryptsetup and fsck; sysctls that run a program as root
+  (`kernel.core_pattern`, `kernel.modprobe`, ...), can't be undone (`kernel.modules_disabled`,
+  `ptrace_scope` 3, ...) or weaken the kernel (`vm.mmap_min_addr`). Add your own in
+  `admin.conf` (`deny-unit <glob>`, `deny-sysctl <glob>`); protected entries show a lock.
+- Requests and results are in the journal: `journalctl -u 'dysd-admin@*'`.
+- dysd joins the `systemd-journal` group so the service status can include log lines.
+- With `admin.conf` in place this is close to root for a paired phone on your Wi-Fi, and for
+  members of the `dys` group through the local socket. Keep the phone locked; revoke a lost one
+  with `dys clients revoke`.
+
 ## Dev test (fish, no root, local state)
 
 ```fish
@@ -213,6 +264,7 @@ Runtime pieces per feature (all optional except systemd/polkit):
 | Update check | `pacman-contrib`; `yay` for AUR | (apt) | (dnf) |
 | GPU stats + power limit | `nvidia-utils` | NVIDIA driver package (provides `nvidia-smi`) | NVIDIA driver (RPM Fusion) |
 | Reboot to Windows | `efibootmgr` | `efibootmgr` | `efibootmgr` |
+| Power profile (System settings) | `power-profiles-daemon` | `power-profiles-daemon` | `tuned-ppd` (default) or `power-profiles-daemon` |
 | Lighting | `openrgb` as a system service on 127.0.0.1:6742 | same (a Flatpak OpenRGB can't run as a system service) | same |
 | Cooling | `nzxt-ctl-git` (AUR) | build nzxt-ctl from source | build nzxt-ctl from source |
 
@@ -266,9 +318,9 @@ sudo install -Dm755 target/release/dys /usr/bin/dys
 sudo install -Dm644 packaging/dysd.sysusers /usr/lib/sysusers.d/dysd.conf
 sudo install -Dm644 packaging/dysd.tmpfiles /usr/lib/tmpfiles.d/dysd.conf
 sudo install -Dm644 -t /usr/lib/systemd/system packaging/dysd.service packaging/dysd-gpu-limit@.service \
-    packaging/dysd-reboot-windows.service packaging/dysd-update.service
+    packaging/dysd-reboot-windows.service packaging/dysd-update.service packaging/dysd-admin@.service
 sudo install -Dm755 -t /usr/lib/dysd packaging/libexec/reboot-to-windows packaging/libexec/record-update-result \
-    packaging/libexec/apply-updates
+    packaging/libexec/apply-updates packaging/libexec/admin
 sudo install -Dm644 packaging/50-dysd.rules /usr/share/polkit-1/rules.d/50-dysd.rules
 sudo systemd-sysusers; and sudo systemd-tmpfiles --create /usr/lib/tmpfiles.d/dysd.conf
 # optional settings (Minecraft, alerts, fan modes); edit after installing
@@ -294,7 +346,9 @@ the dysd it just built, with fake system tools) and the Flutter app tests on eve
 
 Installed from a package: `sudo apt purge dysprosium` (also deletes state, logs and config),
 `sudo dnf remove dysprosium` or `sudo pacman -Rns dysprosium` (these keep `/var/lib/dysd`,
-`/etc/dysd`; delete them by hand for a clean slate). Installed from source: the block below.
+`/etc/dysd`; delete them by hand for a clean slate). Settings the phone kept at boot
+(`/etc/sysctl.d/99-dysd.conf`, `/etc/tmpfiles.d/dysd-tuning.conf`) stay after a remove; `apt purge`
+deletes them too. Installed from source: the block below.
 
 Removes everything the install block created. The state directory holds the CA, the server cert,
 the paired phones, the saved GPU limit, lighting and profiles: after this every phone must pair
@@ -303,12 +357,14 @@ again. Back up `/etc/dysd/dysd.toml` first if you want to keep the RCON password
 ```fish
 sudo systemctl disable --now dysd
 sudo rm -f /usr/bin/dysd /usr/bin/dys
-sudo rm -f /usr/lib/systemd/system/{dysd.service,dysd-gpu-limit@.service,dysd-reboot-windows.service,dysd-update.service}
+sudo rm -f /usr/lib/systemd/system/{dysd.service,dysd-gpu-limit@.service,dysd-reboot-windows.service,dysd-update.service,dysd-admin@.service}
 sudo rm -rf /usr/lib/dysd
 sudo rm -f /usr/share/polkit-1/rules.d/50-dysd.rules /usr/lib/sysusers.d/dysd.conf /usr/lib/tmpfiles.d/dysd.conf
 sudo systemctl daemon-reload
 sudo cp /etc/dysd/dysd.toml ~/dysd.toml.bak   # optional
-sudo rm -rf /var/lib/dysd /var/log/dysd /etc/dysd
+sudo rm -rf /var/lib/dysd /var/log/dysd /etc/dysd /run/dysd-admin
+# settings kept at boot from the phone (check first if you want to keep any)
+sudo rm -f /etc/sysctl.d/99-dysd.conf /etc/tmpfiles.d/dysd-tuning.conf
 sudo userdel dysd; sudo groupdel dys
 ```
 On the phone: uninstall the app (removes its key, layout, theme and Home Assistant settings).

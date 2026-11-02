@@ -8,3 +8,5 @@ m dysd dys
 # refuse to install on PCs without nzxt-ctl.
 g nzxt-ctl -
 m dysd nzxt-ctl
+# Read system logs, for the service status shown in the phone's Services tab.
+m dysd systemd-journal

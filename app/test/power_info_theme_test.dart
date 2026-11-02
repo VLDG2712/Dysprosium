@@ -180,7 +180,7 @@ void main() {
 
   group('layout', () {
     test('info card: in the default System tab; added to an older saved layout automatically', () {
-      expect(AppLayout.defaults().tabs.last.cards.first, 'info');
+      expect(AppLayout.defaults().tabs.last.cards, contains('info'));
       final old = jsonEncode({
         'tabs': [
           {'title': 'Home', 'icon': 'home', 'cards': ['status', 'reboot']},

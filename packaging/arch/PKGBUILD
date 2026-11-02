@@ -49,12 +49,12 @@ package() {
   install -Dm755 target/release/dysd "$pkgdir/usr/bin/dysd"
   install -Dm755 target/release/dys "$pkgdir/usr/bin/dys"
   install -Dm644 -t "$pkgdir/usr/lib/systemd/system" packaging/dysd.service packaging/dysd-gpu-limit@.service \
-    packaging/dysd-reboot-windows.service packaging/dysd-update.service
+    packaging/dysd-reboot-windows.service packaging/dysd-update.service packaging/dysd-admin@.service
   install -Dm755 -t "$pkgdir/usr/lib/dysd" packaging/libexec/reboot-to-windows \
-    packaging/libexec/record-update-result packaging/libexec/apply-updates
+    packaging/libexec/record-update-result packaging/libexec/apply-updates packaging/libexec/admin
   install -Dm644 packaging/dysd.sysusers "$pkgdir/usr/lib/sysusers.d/dysd.conf"
   install -Dm644 packaging/dysd.tmpfiles "$pkgdir/usr/lib/tmpfiles.d/dysd.conf"
   install -Dm644 packaging/50-dysd.rules "$pkgdir/usr/share/polkit-1/rules.d/50-dysd.rules"
-  install -Dm644 -t "$pkgdir/usr/share/doc/$pkgname" packaging/dysd.toml.example README.md
+  install -Dm644 -t "$pkgdir/usr/share/doc/$pkgname" packaging/dysd.toml.example packaging/admin.conf.example README.md
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE-MIT LICENSE-APACHE
 }

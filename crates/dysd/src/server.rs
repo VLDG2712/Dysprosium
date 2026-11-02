@@ -17,6 +17,11 @@ use dys_core::pb::system_server::{System, SystemServer};
 use dys_core::pb::minecraft_action_request::Action as McAction;
 use dys_core::pb::power_request::Action as PowerAction;
 use dys_core::pb::{
+    AdminReply, ControlServiceRequest, GetServiceRequest, GetSystemSettingsRequest, ListProcessesRequest,
+    ListServicesRequest, ProcessList, ServiceDetail, ServiceList, SetSystemSettingRequest, SignalProcessRequest,
+    SystemSettings,
+};
+use dys_core::pb::{
     AlertStatus, ApplyProfileReply, ApplyProfileRequest, ApplyUpdatesRequest, CheckUpdatesRequest, Cooling,
     DeleteProfileRequest, GetAlertsRequest, GetCoolingRequest, GetGpuRequest, GetInfoRequest, GetMinecraftRequest,
     GetGpuDetailRequest, GetStatsRequest, GpuDetail, PowerReply, PowerRequest, SystemInfo,
@@ -269,6 +274,46 @@ impl System for SystemSvc {
 
     async fn get_info(&self, req: Request<GetInfoRequest>) -> Result<Response<SystemInfo>, Status> {
         Ok(Response::new(self.actions.info(req.get_ref().refresh).await))
+    }
+
+    async fn list_processes(&self, req: Request<ListProcessesRequest>) -> Result<Response<ProcessList>, Status> {
+        Ok(Response::new(self.actions.list_processes(from_lan(&req)).await))
+    }
+
+    async fn signal_process(&self, req: Request<SignalProcessRequest>) -> Result<Response<AdminReply>, Status> {
+        let (by, lan) = (who(&req), from_lan(&req));
+        let r = req.into_inner();
+        info!(%by, pid = r.pid, signal = r.signal, lan, "SignalProcess");
+        Ok(Response::new(self.actions.signal_process(r, lan).await?))
+    }
+
+    async fn list_services(&self, req: Request<ListServicesRequest>) -> Result<Response<ServiceList>, Status> {
+        Ok(Response::new(self.actions.list_services(from_lan(&req)).await?))
+    }
+
+    async fn get_service(&self, req: Request<GetServiceRequest>) -> Result<Response<ServiceDetail>, Status> {
+        let lan = from_lan(&req);
+        let r = req.into_inner();
+        Ok(Response::new(self.actions.get_service(&r.name, r.log_lines, lan).await?))
+    }
+
+    async fn control_service(&self, req: Request<ControlServiceRequest>) -> Result<Response<ServiceDetail>, Status> {
+        let (by, lan) = (who(&req), from_lan(&req));
+        let r = req.into_inner();
+        info!(%by, unit = %r.name, action = r.action, now = r.now, lan, "ControlService");
+        Ok(Response::new(self.actions.control_service(r, lan).await?))
+    }
+
+    async fn get_system_settings(&self, req: Request<GetSystemSettingsRequest>) -> Result<Response<SystemSettings>, Status> {
+        let lan = from_lan(&req);
+        Ok(Response::new(self.actions.system_settings(req.into_inner(), lan).await))
+    }
+
+    async fn set_system_setting(&self, req: Request<SetSystemSettingRequest>) -> Result<Response<SystemSettings>, Status> {
+        let (by, lan) = (who(&req), from_lan(&req));
+        let r = req.into_inner();
+        info!(%by, id = %r.id, value = %r.value, persist = r.persist, restore = r.restore, lan, "SetSystemSetting");
+        Ok(Response::new(self.actions.set_system_setting(r, lan).await?))
     }
 }
 

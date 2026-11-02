@@ -1,8 +1,10 @@
 #!/bin/sh
-# dysprosium postrm: on purge, delete dysd's state (CA, server cert, paired phones), logs and config.
+# dysprosium postrm: on purge, delete dysd's state (CA, server cert, paired phones), logs, config
+# and the settings the phone kept at boot.
 set -e
 if [ "$1" = purge ]; then
-    rm -rf /var/lib/dysd /var/log/dysd /etc/dysd
+    rm -rf /var/lib/dysd /var/log/dysd /etc/dysd /run/dysd-admin
+    rm -f /etc/sysctl.d/99-dysd.conf /etc/tmpfiles.d/dysd-tuning.conf
 fi
 if [ -d /run/systemd/system ]; then
     systemctl daemon-reload || true

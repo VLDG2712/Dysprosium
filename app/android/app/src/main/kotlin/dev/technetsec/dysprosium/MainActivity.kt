@@ -1,5 +1,7 @@
 package dev.technetsec.dysprosium
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// FlutterFragmentActivity (not FlutterActivity): local_auth needs a FragmentActivity for the
+// fingerprint prompt.
+class MainActivity : FlutterFragmentActivity()

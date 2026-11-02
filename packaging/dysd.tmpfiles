@@ -1,2 +1,4 @@
 # /usr/lib/tmpfiles.d/dysd.conf — log dir for dysd-update.service (world-readable: pacman output)
 d /var/log/dysd 0755 root root -
+# Results of dysd-admin@ requests: written by root, read by dysd.
+d /run/dysd-admin 0750 root dysd -

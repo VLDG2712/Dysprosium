@@ -55,6 +55,7 @@ class Dysd {
       }
     }
     final fake = Directory('${dir.path}/fake')..createSync();
+    _fakeAdminRoot('${dir.path}/root');
     final logs = Directory('${dir.path}/logs')..createSync();
     // Only a [cooling] section pointing at a socket that can't exist: on europium the real
     // nzxt-ctl socket is reachable. Minecraft and alerts stay unconfigured.
@@ -76,6 +77,9 @@ class Dysd {
         'DYSD_OPENRGB_ADDR': '127.0.0.1:1',
         // Pin the update backend to Arch (the fakebin checkupdates/yay), whatever this machine runs.
         'DYSD_OS_RELEASE': '${dir.path}/os-release',
+        // Processes / services / settings read a fake /proc, /sys and /etc, and the fake systemctl
+        // runs the real root script against it (never the real system).
+        'DYSD_ADMIN_TEST_ROOT': '${dir.path}/root',
       },
     );
     final d = Dysd._(bin, dir, proc, main);
@@ -115,6 +119,33 @@ class Dysd {
     });
     await dir.delete(recursive: true);
   }
+}
+
+/// A fake root for the admin features: /etc/dysd/admin.conf (enabled), a few processes, sysctls,
+/// CPU frequency files. Shared by dysd (reading) and the root script (via the fake systemctl).
+void _fakeAdminRoot(String root) {
+  void w(String rel, String text) => (File('$root/$rel')..createSync(recursive: true)).writeAsStringSync(text);
+  w('etc/dysd/admin.conf', 'deny-unit sshd.service\n');
+  w('etc/login.defs', 'UID_MIN 1000\nUID_MAX 60000\n');
+  w('etc/passwd', 'root:x:0:0::/root:/bin/bash\nvldg:x:1000:1000::/home/vldg:/usr/bin/fish\n');
+  w('proc/stat', 'cpu  100 0 100 800 0 0 0 0 0 0\nbtime 1700000000\n');
+  void proc(int pid, String name, int uid, int start) {
+    w('proc/$pid/stat', '$pid ($name) S 1 $pid $pid 0 -1 4194560 0 0 0 0 10 0 0 0 20 0 3 0 $start 1000 250\n');
+    w('proc/$pid/status', 'Name:\t$name\nUid:\t$uid\t$uid\t$uid\t$uid\n');
+    w('proc/$pid/cmdline', '/usr/bin/$name\u0000--flag\u0000');
+    w('proc/$pid/cgroup', '0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-$name@1.scope\n');
+  }
+  proc(1, 'systemd', 0, 1);
+  proc(500, 'steam', 1000, 3000);
+  proc(700, 'java', 961, 5000);
+  w('proc/sys/vm/swappiness', '60\n');
+  w('proc/sys/kernel/core_pattern', 'core\n');
+  w('proc/sys/net/ipv4/ip_forward', '0\n');
+  w('sys/devices/system/cpu/cpufreq/policy0/scaling_governor', 'powersave\n');
+  w('sys/devices/system/cpu/cpufreq/policy0/scaling_available_governors', 'performance powersave\n');
+  w('sys/devices/system/cpu/cpufreq/policy0/scaling_driver', 'intel_pstate\n');
+  w('usr/share/zoneinfo/Europe/Bucharest', 'TZif');
+  Directory('$root/run/dysd-admin').createSync(recursive: true);
 }
 
 Future<PairedServer> _pairFresh(Dysd d, String name) async {
@@ -267,6 +298,90 @@ void main() {
     expect(sw.elapsed, lessThan(const Duration(seconds: 7)));
     await sub.cancel();
     await c.close();
+  });
+
+  group('processes, services, settings (fake root + the real root script)', () {
+    late DysClient c;
+    setUp(() async => c = DysClient(await _pairFresh(d, 'admin')));
+    tearDown(() async => c.close());
+    String calls() => d.fake('calls').existsSync() ? d.fake('calls').readAsStringSync() : '';
+
+    test('processes: list, end own process, refuse a system one', () async {
+      final l = await c.listProcesses();
+      expect(l.access.enabled && l.access.canChange, isTrue);
+      final steam = l.processes.firstWhere((p) => p.pid == 500);
+      expect([steam.killable, steam.user, steam.unit], [true, 'vldg', 'app-steam@1.scope']);
+      expect(l.processes.firstWhere((p) => p.pid == 700).killable, isFalse);
+
+      expect(await c.signalProcess(500, steam.startTicks, SignalProcessRequest_Signal.TERM), 'sent SIGTERM to steam (500)');
+      expect(calls(), contains('kill -s TERM 500'));
+      final java = l.processes.firstWhere((p) => p.pid == 700);
+      await expectLater(c.signalProcess(700, java.startTicks, SignalProcessRequest_Signal.KILL),
+          throwsA(_kind(DysErrorKind.forbidden)));
+      await expectLater(c.signalProcess(500, steam.startTicks + 1, SignalProcessRequest_Signal.KILL),
+          throwsA(isA<DysException>()));
+      expect('kill -s'.allMatches(calls()).length, 1);
+    });
+
+    test('services: list with protected units, details, restart, refuse a protected one', () async {
+      final l = await c.listServices();
+      final names = l.services.map((s) => s.name).toList();
+      expect(names, containsAll(['atm10.service', 'cups.service', 'getty@tty1.service']));
+      expect(l.services.firstWhere((s) => s.name == 'getty@tty1.service').protected, isTrue);
+
+      final d0 = await c.getService('atm10.service');
+      expect([d0.mainPid, d0.info.activeState], [4242, 'active']);
+      expect(d0.statusText, contains('Fake atm10.service'));
+
+      final stopped = await c.controlService('atm10.service', ControlServiceRequest_Action.STOP);
+      expect(stopped.message, 'stop atm10.service: done');
+      expect(stopped.info.activeState, 'inactive');
+      await expectLater(c.controlService('getty@tty1.service', ControlServiceRequest_Action.STOP),
+          throwsA(_kind(DysErrorKind.forbidden)));
+      await expectLater(c.controlService('sshd.service', ControlServiceRequest_Action.STOP),
+          throwsA(_kind(DysErrorKind.forbidden)), reason: 'admin.conf deny-unit');
+    });
+
+    test('settings: read, change with "keep after reboot", restore, protected key', () async {
+      Setting find(SystemSettings s, String id) => s.groups.expand((g) => g.settings).firstWhere((x) => x.id == id);
+      final s0 = await c.getSystemSettings();
+      expect(find(s0, 'sysctl:vm.swappiness').value, '60');
+      expect(find(s0, 'power:profile').choices, ['power-saver', 'balanced', 'performance']);
+      expect(find(s0, 'sys:hostname').value, 'fakehost');
+
+      final s1 = await c.setSystemSetting('sysctl:vm.swappiness', '10', persist: true);
+      expect(s1.message, 'vm.swappiness = 10 (also at boot)');
+      final sw = find(s1, 'sysctl:vm.swappiness');
+      expect([sw.value, sw.original, sw.persistent], ['10', '60', true]);
+      expect(File('${d.dir.path}/root/etc/sysctl.d/99-dysd.conf').readAsStringSync(), contains('vm.swappiness = 10'));
+
+      final s2 = await c.setSystemSetting('sysctl:vm.swappiness', '', restore: true);
+      expect(find(s2, 'sysctl:vm.swappiness').value, '60');
+      expect(File('${d.dir.path}/root/etc/sysctl.d/99-dysd.conf').existsSync(), isFalse);
+
+      final s3 = await c.setSystemSetting('cpu:governor', 'performance');
+      expect(find(s3, 'cpu:governor').value, 'performance');
+      final s4 = await c.setSystemSetting('power:profile', 'performance');
+      expect(find(s4, 'power:profile').value, 'performance');
+
+      await expectLater(c.setSystemSetting('sysctl:vm.swappiness', '999'), throwsA(_kind(DysErrorKind.invalidInput)));
+      final any = await c.getSystemSettings(sysctlKeys: ['kernel.core_pattern']);
+      expect(find(any, 'sysctl:kernel.core_pattern').writable, isFalse);
+      await expectLater(c.setSystemSetting('sysctl:kernel.core_pattern', '|/tmp/x'), throwsA(isA<DysException>()));
+      expect(File('${d.dir.path}/root/proc/sys/kernel/core_pattern').readAsStringSync(), 'core\n');
+    });
+
+    test('off without admin.conf: everything still readable, no changes', () async {
+      File('${d.dir.path}/root/etc/dysd/admin.conf').deleteSync();
+      final l = await c.listProcesses();
+      expect(l.access.enabled, isFalse);
+      expect(l.access.reason, contains('admin.conf'));
+      expect(l.processes, isNotEmpty);
+      await expectLater(c.signalProcess(500, l.processes.firstWhere((p) => p.pid == 500).startTicks,
+          SignalProcessRequest_Signal.TERM), throwsA(_kind(DysErrorKind.forbidden)));
+      await expectLater(c.setSystemSetting('sysctl:vm.swappiness', '10'), throwsA(_kind(DysErrorKind.forbidden)));
+      expect(calls(), isNot(contains('dysd-admin@')));
+    });
   });
 
   group('actions (fake system tools)', () {

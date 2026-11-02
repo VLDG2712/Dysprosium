@@ -106,5 +106,96 @@ class PowerRequest_Action extends $pb.ProtobufEnum {
   const PowerRequest_Action._(super.value, super.name);
 }
 
+class SignalProcessRequest_Signal extends $pb.ProtobufEnum {
+  static const SignalProcessRequest_Signal SIGNAL_UNSPECIFIED =
+      SignalProcessRequest_Signal._(
+          0, _omitEnumNames ? '' : 'SIGNAL_UNSPECIFIED');
+  static const SignalProcessRequest_Signal TERM =
+      SignalProcessRequest_Signal._(1, _omitEnumNames ? '' : 'TERM');
+  static const SignalProcessRequest_Signal KILL =
+      SignalProcessRequest_Signal._(2, _omitEnumNames ? '' : 'KILL');
+
+  static const $core.List<SignalProcessRequest_Signal> values =
+      <SignalProcessRequest_Signal>[
+    SIGNAL_UNSPECIFIED,
+    TERM,
+    KILL,
+  ];
+
+  static final $core.List<SignalProcessRequest_Signal?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 2);
+  static SignalProcessRequest_Signal? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const SignalProcessRequest_Signal._(super.value, super.name);
+}
+
+class ControlServiceRequest_Action extends $pb.ProtobufEnum {
+  static const ControlServiceRequest_Action ACTION_UNSPECIFIED =
+      ControlServiceRequest_Action._(
+          0, _omitEnumNames ? '' : 'ACTION_UNSPECIFIED');
+  static const ControlServiceRequest_Action START =
+      ControlServiceRequest_Action._(1, _omitEnumNames ? '' : 'START');
+  static const ControlServiceRequest_Action STOP =
+      ControlServiceRequest_Action._(2, _omitEnumNames ? '' : 'STOP');
+  static const ControlServiceRequest_Action RESTART =
+      ControlServiceRequest_Action._(3, _omitEnumNames ? '' : 'RESTART');
+  static const ControlServiceRequest_Action RELOAD =
+      ControlServiceRequest_Action._(4, _omitEnumNames ? '' : 'RELOAD');
+  static const ControlServiceRequest_Action ENABLE =
+      ControlServiceRequest_Action._(5, _omitEnumNames ? '' : 'ENABLE');
+  static const ControlServiceRequest_Action DISABLE =
+      ControlServiceRequest_Action._(6, _omitEnumNames ? '' : 'DISABLE');
+  static const ControlServiceRequest_Action RESET_FAILED =
+      ControlServiceRequest_Action._(7, _omitEnumNames ? '' : 'RESET_FAILED');
+
+  static const $core.List<ControlServiceRequest_Action> values =
+      <ControlServiceRequest_Action>[
+    ACTION_UNSPECIFIED,
+    START,
+    STOP,
+    RESTART,
+    RELOAD,
+    ENABLE,
+    DISABLE,
+    RESET_FAILED,
+  ];
+
+  static final $core.List<ControlServiceRequest_Action?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 7);
+  static ControlServiceRequest_Action? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const ControlServiceRequest_Action._(super.value, super.name);
+}
+
+class Setting_Kind extends $pb.ProtobufEnum {
+  static const Setting_Kind KIND_UNSPECIFIED =
+      Setting_Kind._(0, _omitEnumNames ? '' : 'KIND_UNSPECIFIED');
+  static const Setting_Kind BOOL =
+      Setting_Kind._(1, _omitEnumNames ? '' : 'BOOL');
+  static const Setting_Kind INT =
+      Setting_Kind._(2, _omitEnumNames ? '' : 'INT');
+  static const Setting_Kind CHOICE =
+      Setting_Kind._(3, _omitEnumNames ? '' : 'CHOICE');
+  static const Setting_Kind TEXT =
+      Setting_Kind._(4, _omitEnumNames ? '' : 'TEXT');
+
+  static const $core.List<Setting_Kind> values = <Setting_Kind>[
+    KIND_UNSPECIFIED,
+    BOOL,
+    INT,
+    CHOICE,
+    TEXT,
+  ];
+
+  static final $core.List<Setting_Kind?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 4);
+  static Setting_Kind? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const Setting_Kind._(super.value, super.name);
+}
+
 const $core.bool _omitEnumNames =
     $core.bool.fromEnvironment('protobuf.omit_enum_names');

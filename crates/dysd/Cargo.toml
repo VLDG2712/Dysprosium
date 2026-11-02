@@ -65,13 +65,16 @@ assets = [
     ["../../packaging/dysd-gpu-limit@.service", "usr/lib/systemd/system/", "644"],
     ["../../packaging/dysd-reboot-windows.service", "usr/lib/systemd/system/", "644"],
     ["../../packaging/dysd-update.service", "usr/lib/systemd/system/", "644"],
+    ["../../packaging/dysd-admin@.service", "usr/lib/systemd/system/", "644"],
     ["../../packaging/libexec/reboot-to-windows", "usr/lib/dysd/", "755"],
     ["../../packaging/libexec/record-update-result", "usr/lib/dysd/", "755"],
     ["../../packaging/libexec/apply-updates", "usr/lib/dysd/", "755"],
+    ["../../packaging/libexec/admin", "usr/lib/dysd/", "755"],
     ["../../packaging/dysd.sysusers", "usr/lib/sysusers.d/dysd.conf", "644"],
     ["../../packaging/dysd.tmpfiles", "usr/lib/tmpfiles.d/dysd.conf", "644"],
     ["../../packaging/50-dysd.rules", "usr/share/polkit-1/rules.d/", "644"],
     ["../../packaging/dysd.toml.example", "usr/share/doc/dysprosium/", "644"],
+    ["../../packaging/admin.conf.example", "usr/share/doc/dysprosium/", "644"],
     ["../../README.md", "usr/share/doc/dysprosium/", "644"],
 ]
 
@@ -89,13 +92,16 @@ assets = [
     { source = "../../packaging/dysd-gpu-limit@.service", dest = "/usr/lib/systemd/system/dysd-gpu-limit@.service", mode = "644" },
     { source = "../../packaging/dysd-reboot-windows.service", dest = "/usr/lib/systemd/system/dysd-reboot-windows.service", mode = "644" },
     { source = "../../packaging/dysd-update.service", dest = "/usr/lib/systemd/system/dysd-update.service", mode = "644" },
+    { source = "../../packaging/dysd-admin@.service", dest = "/usr/lib/systemd/system/dysd-admin@.service", mode = "644" },
     { source = "../../packaging/libexec/reboot-to-windows", dest = "/usr/lib/dysd/reboot-to-windows", mode = "755" },
     { source = "../../packaging/libexec/record-update-result", dest = "/usr/lib/dysd/record-update-result", mode = "755" },
     { source = "../../packaging/libexec/apply-updates", dest = "/usr/lib/dysd/apply-updates", mode = "755" },
+    { source = "../../packaging/libexec/admin", dest = "/usr/lib/dysd/admin", mode = "755" },
     { source = "../../packaging/dysd.sysusers", dest = "/usr/lib/sysusers.d/dysd.conf", mode = "644" },
     { source = "../../packaging/dysd.tmpfiles", dest = "/usr/lib/tmpfiles.d/dysd.conf", mode = "644" },
     { source = "../../packaging/50-dysd.rules", dest = "/usr/share/polkit-1/rules.d/50-dysd.rules", mode = "644" },
     { source = "../../packaging/dysd.toml.example", dest = "/usr/share/doc/dysprosium/dysd.toml.example", mode = "644", doc = true },
+    { source = "../../packaging/admin.conf.example", dest = "/usr/share/doc/dysprosium/admin.conf.example", mode = "644", doc = true },
     { source = "../../README.md", dest = "/usr/share/doc/dysprosium/README.md", mode = "644", doc = true },
 ]
 

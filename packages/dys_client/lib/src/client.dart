@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show SecurityContext;
 
+import 'package:fixnum/fixnum.dart';
 import 'package:grpc/grpc.dart';
 
 import 'errors.dart';
@@ -230,6 +231,46 @@ class DysClient {
   /// OS, kernel, shell, desktop, CPU, GPU, RAM, disks, network (cached 60 s by dysd).
   Future<pb.SystemInfo> getInfo({bool refresh = false}) =>
       _call((s, o) => s.getInfo(pb.GetInfoRequest(refresh: refresh), options: o), timeout: const Duration(seconds: 20));
+
+  // ---- processes, services, system settings ----------------------------------------------------
+  // Reading works everywhere; changes need /etc/dysd/admin.conf on the PC and the home network.
+  // Each reply carries `access` (enabled / canChange / reason) for the UI.
+
+  /// All processes with CPU over ~0.5 s (dysd samples twice), sorted by CPU.
+  Future<pb.ProcessList> listProcesses() =>
+      _call((s, o) => s.listProcesses(pb.ListProcessesRequest(), options: o), timeout: const Duration(seconds: 15));
+
+  /// TERM asks the process to quit, KILL forces it. [startTicks] from [pb.ProcessInfo] makes sure a
+  /// reused PID is never hit.
+  Future<String> signalProcess(int pid, Int64 startTicks, pb.SignalProcessRequest_Signal signal) async {
+    final r = await _call(
+        (s, o) => s.signalProcess(pb.SignalProcessRequest(pid: pid, startTicks: startTicks, signal: signal), options: o),
+        timeout: const Duration(seconds: 30));
+    return r.message;
+  }
+
+  Future<pb.ServiceList> listServices() =>
+      _call((s, o) => s.listServices(pb.ListServicesRequest(), options: o), timeout: const Duration(seconds: 20));
+
+  Future<pb.ServiceDetail> getService(String name, {int logLines = 30}) => _call(
+      (s, o) => s.getService(pb.GetServiceRequest(name: name, logLines: logLines), options: o),
+      timeout: const Duration(seconds: 20));
+
+  /// Start/stop/restart can take as long as the unit does; dysd allows up to ~2 min.
+  Future<pb.ServiceDetail> controlService(String name, pb.ControlServiceRequest_Action action, {bool now = false}) =>
+      _call((s, o) => s.controlService(pb.ControlServiceRequest(name: name, action: action, now: now), options: o),
+          timeout: const Duration(seconds: 150));
+
+  Future<pb.SystemSettings> getSystemSettings({bool allSysctl = false, List<String> sysctlKeys = const []}) => _call(
+      (s, o) => s.getSystemSettings(pb.GetSystemSettingsRequest(allSysctl: allSysctl, sysctlKeys: sysctlKeys), options: o),
+      timeout: const Duration(seconds: 20));
+
+  /// [persist]: keep after reboot. [restore]: put back the value from before dysd's first change.
+  Future<pb.SystemSettings> setSystemSetting(String id, String value, {bool persist = false, bool restore = false}) =>
+      _call(
+          (s, o) => s.setSystemSetting(
+              pb.SetSystemSettingRequest(id: id, value: value, persist: persist, restore: restore), options: o),
+          timeout: const Duration(seconds: 60));
 
   /// [broken]: the connection just failed, so drop it instead of closing it politely. A peer that
   /// rejected our certificate after the TLS 1.3 handshake may never answer the HTTP/2 GOAWAY, and
